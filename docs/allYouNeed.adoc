@@ -1,0 +1,649 @@
+:toc:
+
+= JSON++ is All You Need
+
+**Abstract:** In various areas of software development, in order to describe information with complex structures and constraints, a number of similar but different notations have been proposed and used.
+This is especially frequent in configurations of distributed systems.
+In this article, we strictly identify a notation's human-readability and functionality are different ones.
+Then, we introduce a notation which focuses on the latter, called **JSON{plus}{plus}**.
+Based on it, we demonstrate a pipeline-based approach is possible, where data defined in human-readability focused notations such as **YAML** and **HCL** are transformed into **JSON{plus}{plus}**.
+Finally, it will be shown that the size of configuration information that a human needs to read can be reduced down to under 20% of the original size without loosing necessary information yet delivering flexibility and clarity using a working example.
+
+== Introduction
+
+**Status Quo:** Not a few similar yet different notations have been proposed and applied to various software products in order to describe information with complex structures and constraints.
+
+This is found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions such as **docker**<<docker>>, **Kubernetes**<<k8s>>, and its related products.
+These products define its own notations and syntaxes to address similar concerns.
+**docker-compose.yaml** of **docker**, **HCL** of Terraform<<terraform>>, **manifests** of Kubernetes and Kustomize<<kustomize>>, or **Charts** of Helm<<helm>> are such instances.
+
+The syntax is mixture of application specific keyword semantics and common concerns.
+"Common concerns" are in general their own inheritance mechanisms and interpolation mechanisms.
+In case developers think they want to improve human readability, they sometimes even try to come up with completely new notation.
+**HCL** of Terraform is an example for this.
+
+In short, currently, various applications define their own DSLs based on their specifications.
+However, they share common concerns and keep addressing similar problems repetitively, which is inefficient, error-prone, and raising learning costs for users.
+This situation can be found not only in configurations of distributed systems.
+In testing automation, test cases are defined using a custom DSL.
+
+In this article, we will propose a method, where:
+
+1. We consider human readability and conciseness are completely separate concerns.
+2. Then, we will focus on the latter and propose a notation **JSON{plus}{plus}**.
+This will be a notation whose instances are strictly complying with JSON.
+3. After that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
+The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files and resolve inheritances and interpolations defined in them.
+
+This approach allows us to keep using the same tool support, syntax highlighting plugins and other utilities.
+For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
+Because it will be a user side concern.
+Only in case they want to uniform how such configurations should be written, or they want to reduce user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
+
+The rest of this paper is organized as follows:
+In <<background>>, we will discuss how the problem of repetitiveness in configuration files and other sorts of files has been addressed, or not addressed.
+In <<technique>>, the details of our approach and the syntax we designed for this approach will be described.
+Then in <<results>>,
+
+<<jq-front>>
+
+Challenges:
+
+- Inheritances,
+- References,
+- Interpolation,
+
+Pains
+
+- Similar, yet different notations and implementations
+- Learning cost everytime diving in a new application
+
+Status Quo Solutions
+
+- Custom Application-specific solutions
+
+Proposed Solution
+
+- Separation of Concerns, Pipelining
+- JSON++, which supports Inheritance, References, Interpolation
+- Most notations are defined as supersets of JSON.
+- Most
+
+The rest of this paper is organized: **Background**, **Technique**, **Result**, and **Conclusion**.
+
+[[background]]
+== Background
+
+In software industry, although it is considered important practice to follow "D-R-Y"(Don't repeat yourself)<<dry>>, configuration files and other data files sometimes need to be repetitive.
+For examples, to configure a distributed system, to define test cases, to define characters and stages for a game, we need to define similar yet slightly different files over and over again.
+To achieve design intentions through them, we need to make them comply with constraints applications define to which those files belong.
+
+**Docker:** For instance, to build an application using `docker`<<docker>> from multiple application images, a user has to write `docker-compose.yaml` file.
+Inside the file, a user has to define node values so that they satisfy constraints which the user application and the platform require.
+
+[source,yaml]
+.`docker-compose.yaml` example (generated by ChatGPT4)
+----
+version: '3.9'
+
+services:
+  webapp1:
+    image: mywebapp:latest
+    build:
+      context: ./webapp
+    ports:
+      - "8080:80"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    volumes:
+      - webapp-data:/var/lib/webapp
+
+  webapp2:
+    image: mywebapp:latest
+    build:
+      context: ./webapp
+    ports:
+      - "8081:80"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    volumes:
+      - webapp-data:/var/lib/webapp
+
+  db1:
+    image: postgres:14
+    environment:
+      - POSTGRES_USER=user1
+      - POSTGRES_PASSWORD=pass1
+      - POSTGRES_DB=db1
+    ports:
+      - "5432:5432"
+    volumes:
+      - db1-data:/var/lib/postgresql/data
+
+  db2:
+    image: postgres:14
+    environment:
+      - POSTGRES_USER=user2
+      - POSTGRES_PASSWORD=pass2
+      - POSTGRES_DB=db2
+    ports:
+      - "5433:5432"
+    volumes:
+      - db2-data:/var/lib/postgresql/data
+
+volumes:
+  webapp-data:
+  db1-data:
+  db2-data:
+----
+
+Designers of `docker-compose` are aware of this challenge, and they created application specific feature for their product called **x-extensions**[<<xExtensionExample>>].
+With a method we will see later in the <<technique>> section, it will be shown that this can be addressed without such application specific mechanisms.
+
+[%collapsible]
+====
+[[xExtensionExample, example-1]]
+[source,yaml]
+.**x-extensions example**
+----
+version: '3.9'
+
+x-webapp-service: &webapp-service
+  image: mywebapp:latest
+  build:
+    context: ./webapp
+  environment:
+    - APP_ENV=production
+    - APP_DEBUG=false
+  volumes:
+    - webapp-data:/var/lib/webapp
+
+x-db-service: &db-service
+  image: postgres:14
+  ports:
+    - "5432:5432"
+  environment:
+    POSTGRES_PASSWORD: pass123
+  volumes:
+    - db-data:/var/lib/postgresql/data
+
+services:
+  webapp1:
+    <<: *webapp-service
+    ports:
+      - "8080:80"
+
+  webapp2:
+    <<: *webapp-service
+    ports:
+      - "8081:80"
+
+  db1:
+    <<: *db-service
+    environment:
+      - POSTGRES_USER=user1
+      - POSTGRES_DB=db1
+
+  db2:
+    <<: *db-service
+    environment:
+      - POSTGRES_USER=user2
+      - POSTGRES_DB=db2
+    ports:
+      - "5433:5432"
+
+volumes:
+  webapp-data:
+  db-data:
+----
+====
+
+**Kubernetes and Kustomize:**
+**ChatGPT:** Kubernetes<<k8s>> is an open-source container orchestration platform that automates the deployment, scaling, and management of containerized applications.
+It enables developers to manage complex application infrastructure at scale, ensuring high availability and facilitating efficient resource utilization across clusters of hosts.
+Kustomize is a Kubernetes-native configuration management tool that allows users to customize and manage Kubernetes resource configurations declaratively.
+
+Following is a folder structure that a user is supposed to define.
+
+[source]
+.Kustomize config files (generated by ChatGPT4)
+----
+my-app/
+├── base/
+│   ├── kustomization.yaml
+│   ├── deployment.yaml
+│   └── service.yaml
+└── overlays/
+    ├── development/
+    │   ├── kustomization.yaml
+    │   └── patch-deployment.yaml
+    └── production/
+        ├── kustomization.yaml
+        └── patch-deployment.yaml
+----
+
+These files are quite repetitive, and sometimes it increases maintenance cost significantly.
+As a matter of fact, there are a couple of schools in Kubernetes practitioners community.
+One is **Kustomize** school and the other is **Helm**, which allows to use templating in configuration files.
+Former places importance more on being declarative and clarity over simplicity in descriptions of configuration files, while the latter does the other way around.
+
+.Contents of Kustomize config files (generated by ChatGPT4)
+[%collapsible]
+====
+[source,yaml]
+.Kustomize: `base/deployment.yaml`:
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+  labels:
+    app: my-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+        - name: my-app-container
+          image: my-app-image:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: DATABASE_URL
+              value: jdbc:mysql://localhost:3306/mydatabase----
+----
+====
+
+[source,yaml]
+.Kustomize: `base/service.yaml`:
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-service
+  labels:
+    app: my-app
+spec:
+  type: ClusterIP
+  selector:
+    app: my-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+----
+
+[source,yaml]
+.Kustomize: `base/kustomization.yaml`:
+----
+resources:
+  - deployment.yaml
+  - service.yaml
+----
+
+[source,yaml]
+.`overlays/development/deployment.yaml`
+----
+resources:
+  - ../../base
+
+patchesStrategicMerge:
+  - patch-deployment.yaml
+----
+
+[source,yaml]
+.Kustomize: `overlays/development/patch-deployment.yaml`:
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: my-app-container
+          image: my-app-image:dev-latest
+          env:
+            - name: DATABASE_URL
+              value: jdbc:mysql://dev-db:3306/mydatabase
+  selector:
+    matchLabels:
+      app: my-app
+----
+
+[source,yaml]
+.`overlays/production/deployment.yaml`
+----
+resources:
+  - ../../base
+
+patchesStrategicMerge:
+  - patch-deployment.yaml
+----
+
+[source,yaml]
+.`overlays/production/patch-deployment.yaml`
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+        - name: my-app-container
+          image: my-app-image:prod-latest
+          env:
+            - name: DATABASE_URL
+              value: jdbc:mysql://prod-db:3306/mydatabase
+  selector:
+    matchLabels:
+      app: my-app
+----
+**Terraform:**
+
+So far, we have discussed only containerization platforms and their application configurations, however, the same thing keeps happening in the software industry.
+
+For instance, in gaming industry,
+
+In
+
+[[technique]]
+== Technique
+
+As stated in the **Background** section, the industry has tried to address similar problems over and over again.
+
+One uses YAML, another TOML, yet another comes upt with a new notation such as HCL, HOCON, etc.
+
+To address these challenges, we have created a tool called <<jq-front>>.
+
+=== Separation of Concerns
+
+In our approach, we identify the human readability and the capability to make the descriptions "D-R-Y"ed are completely independent concerns.
+Being able to reduce repetitions might improve the human-readability as a result as a result, still it is different from the readability improvement delivered by YAML,TOML, HCL, and other sorts of super-JSON notations.
+Those notations allow users not to quote strings, where obvious from the context.
+
+=== New Notation: JSON++
+
+We implemented a processor **jq-front**<<jq-front>>, that converts data written in JSON{plus}{plus} into plain JSON.
+We named this tool after a pre-processor that converts C{plus}{plus} source code into plain C source code, **Cfront**<<Cfront>>.
+
+[ditaa]
+----
+                                         +-----------------------------+
+        +----------+                     |                             |
+        |  Input{d}|<--------------------+  Inheritance Resolver Module|
+        +----------+                     |                             |
+                                         +---------------+-------------+
+                                                         |
+                                                         :
+                                                         V
+                                                    +----+----+
+                                                    |Work(2 a)|
+                                                    |{d}      |
+                                                    +----+----+
+                                                         ^
+                                                         |
+                                              +----------+---------+
+                                              |    Interpolation   |
+                                              |   Handling Module  |
+                                              +----------+---------+
+                                                         |
+                                                         :
+                                                         V
+                                                     +---+---+
+  +----+       +----+                                |Output |
+  |A{o}+------>+B{o}| (A reads from B)               |{d}    |
+  +----+       +----+                                +---+---+
+----
+
+It consists of a couple of moules, which are **Inheritance Resolution** and **Interpolation Handling**.
+As their names suggests, once a source file is given to the tool, **Inheritance Resolution** module processes it to resolve inheritances defined in the source, then its output is passed to the **Interpolation Handling** module.
+Each of them has its own internal pipelines.
+In this section, we will be looking into them one by one.
+
+For the sake of the discussion, we assume we have the following files in the current working directory.
+
+[source,json]
+.source.json++
+----
+{
+  "$extends": [ "base.json++" ],
+  "$local": {
+    "A": {
+      "eval:$(echo -n Hello)": "eval:$(ref .test.k)"
+    }
+  },
+  "test": {
+    "$extends": [
+      "A"
+    ],
+    "k": "hello"
+  }
+}
+----
+
+[source,json]
+.base.json++
+----
+{
+  "base": "world"
+}
+----
+
+==== Inheritance Mechanism
+
+**Inheritance Resolution** is divided into three parts as in all.
+One is "file level inheritance handling", another is "local node materialization", and the third is "node level inheritance".
+Each of them is designed to serve for different responsibilities.
+
+[ditaa]
+.Inheritance Mechanism
+----
+              +------------------------------------------------------------------------+
+              |                                                                        |
+              | file-level                    local node materialization               |
+              | inheritance                                                            |
+              |   +----+                               +-----+                         |
+    +---------|---+ {o}+-=----------+     +------------+ {o} +-=-----------+           |
+    |         |   +----+            |     |            +-----+             | 0...n     |
+    V         |                     V     V                                V           |
+  +------+    |                    +-------+                         +------------+    |
+  |Source|    |                    |Work(1)|                         |LocalNodes  |    |
+  |{d}   |    |                    |{d}    |                         |{d}         |    |
+  +------+    |                    +-------+                         +------------+    |
+              |                        ^        node-level inheritance     ^           |
+              |                        |              +-----+              |           |
+              |                        +--------------+ {o} +--------------+           |
+              |                                       +--+--+                          |
+              |                                          |                             |
+              +------------------------------------------|-----------------------------+
+                                                         :
+                                                         V
+                                                    +----+----+
+  +----+       +----+                               |Work(2 a)|
+  |A{o}+------>+B{o}| (A reads from B)              |{d}      |
+  +----+       +----+                               +----+----+
+----
+
+File Level Inheritance:: In the file level inheritance resolution, it reads a given source file and it traces the files on `JF_PATH` environment variable.
+Through this process, a file **Work (1)** in the Figure <<Inheritance>>, will be generated and its content will be as follows.
+
+[source,json]
+.Content of a temporary file: "Work (1)"
+----
+{
+  "$extends": [ "base.json++" ],
+  "$local": {
+    "A": {
+      "eval:$(echo -n Key)": "eval:$(ref .test.k)"
+    }
+  },
+  "test": {
+    "$extends": [
+      "A"
+    ],
+    "k": "hello"
+  },
+  "base": "world"
+}
+----
+
+Local Node Materialization:: A "local node" is a concept to use "inheritances" without creating files outside a source file.
+In the given source file, there is a node `$local`, under which an entry `"A": { "key": "..." }` is defined.
+This generates a file whose name is `A` under a temporary directory, which is a part of `JF_PATH` environment variable.
+Thus, exactly the same syntax and behavior is available, when a data designer places `$extends: ["A"]` somewhere in the source file.
+
+[source,json]
+.The content of file "A"
+----
+{
+  "eval:$(echo -n Key)": "eval:$(ref .test.k)"
+}
+----
+
+`ref` is a built-in function of the processor, and it prints a value of a node specified by an argument passed to it.
+
+
+Node Level Inheritance:: t.b.d.
+
+[source, json]
+.Content of File: `Work(2 b)`
+----
+{
+  "test": {
+    "k": "hello",
+    "Hello": "eval:$(ref .test.k)"
+  },
+  "base": "world"
+}
+----
+
+[source, json]
+.Content of Output
+----
+{
+  "test": {
+    "k": "hello",
+    "Hello": "hello"
+  },
+  "base": "world"
+}
+----
+
+=== Interpolation Mechanism
+
+[ditaa]
+.Interpolation Mechanism
+----
+                                                    +----+----+
+                                                    |Work(2 a)|
+                                                    |{d}      |
+                                                    +----+----+
+                                                         ^
+                                                         |
+                                              +----------|---------+templating (optional)
+                                              |          |         |
+                                              |       +--+--+      |
+                                              |       | {o} |      |key-side processing
+                                              |       +--+--+      |
+                                              |          |         |
+                                              |          :         |
+                                              |          V         |
+                                              |+---------+--------+|
+                                              ||    Work(2 b)     ||
+                                              ||internal variable ||
+                                              |+---------+--------+|
+                                              |          ^         |
+                                              |          |         |
+                                              |          |         |
+                                              |       +--+--+      |
+                                              |       | {o} |      |value-side processing
+                                              |       +--+--+      |
+                                              |          :         |
+                                              +----------|---------+
+                                                         |
+                                                         :
+                                                         V
+                                                     +---+---+
+  +----+       +----+                                |Output |
+  |A{o}+------>+B{o}| (A reads from B)               |{d}    |
+  +----+       +----+                                +---+---+
+----
+
+=== Pipelined Approach
+
+Conventional approaches disccussed in <<background>> section do not identify concerns such as readability for humans and that for machines as independent ones.
+
+[mermaid]
+.Conventional Approach
+----
+graph LR
+    App((Application))    -->|read| AppData[A: Custom Representation]
+    App -->|Internally process data| App
+----
+
+An application reads configuration files, resolves references and inheritances, and it interprets their contents based on application specific semantics.
+Based on the interpreted information, it performs required operations.
+These are executed as a single and indivisible action.
+
+Instead, the approach we are proposing separates these concerns independent and executable one by one.
+
+[mermaid]
+.Proposed Approach
+----
+graph LR
+    toJSON((1: toJSON))      -->|read| AppData[A: HCL, YAML, etc.. ]
+    toJSON                  -.->|write| JSON++[B: JSON++]
+    jq-front((2: jq-front))  -->|read| JSON++
+    jq-front                -.->|write| JSON[C: JSON]
+    App((3: Application))    -->|read| JSON
+----
+
+[[results]]
+== Results
+(t.b.d.)
+
+[[conclusion]]
+== Conclusion
+(t.b.d.)
+
+=== Limitations
+(t.b.d.)
+
+=== Future Works
+
+Implementation in faster and more reliable languages such as Java, golang, or Rust.
+Sandboxing.
+
+Refining finer details such as semantics on multiple inheritances.
+That is, what should happen when different types of nodes are found at the same JSON path location.
+
+[bibliography]
+== References
+
+- [[[jq-front, 1]]] jq-front project in github.org. https://github.com/dakusui/jq-front[jq-front]:
+2019
+- [[[Cfront, 2]]] Cfront article in Wiki[edia https://en.wikipedia.org/wiki/Cfront
+- [[[dry, 3]]] Hunt, Andrew; Thomas, David (1999).
+The Pragmatic Programmer : From Journeyman to Master (1 edition).
+US: Addison-Wesley. pp. 320. ISBN 978-0201616224
+- [[[hocon, 8]]] HOCON (Human-Optimized Config Object Notation) https://github.com/lightbend/config[HOCON]:2020
+- [[[docker, 9]]] Kubernetes t.b.d.
+- [[[k8s, 10]]] Kubernetes t.b.d.
+- [[[terraform, 11]]] Kubernetes t.b.d.
+- [[[helm, 12]]] Helm t.b.d.
+- [[[kustomize, 13]]] Kustomize t.b.d.
+- [[[runn, 14]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml
