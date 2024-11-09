@@ -2,24 +2,29 @@
 
 = JSON++ is All You Need
 
-**Abstract:** In various areas of software development, in order to describe information with complex structures and constraints, a number of similar but different notations have been proposed and used.
+**Abstract:** In various areas of software development,
+to describe information with complex structures and constraints,
+a number of similar but different notations have been proposed and used.
 This is especially frequent in configurations of distributed systems.
 In this article, we strictly identify a notation's human-readability and functionality are different ones.
 Then, we introduce a notation which focuses on the latter, called **JSON{plus}{plus}**.
 Based on it, we demonstrate a pipeline-based approach is possible, where data defined in human-readability focused notations such as **YAML** and **HCL** are transformed into **JSON{plus}{plus}**.
-Finally, it will be shown that the size of configuration information that a human needs to read can be reduced down to under 20% of the original size without loosing necessary information yet delivering flexibility and clarity using a working example.
+Finally, it will be shown that the size of configuration information can be reduced down to under 20% of the original size without loosing necessary information yet delivering flexibility and clarity using a working example.
 
+[[introduction]]
 == Introduction
 
-**Status Quo:** Not a few similar yet different notations have been proposed and applied to various software products in order to describe information with complex structures and constraints.
+**Status Quo:** Not a few similar yet different notations have been proposed and applied to various software products to describe information with complex structures and constraints.
 
 This is found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions such as **docker**<<docker>>, **Kubernetes**<<k8s>>, and its related products.
-These products define its own notations and syntaxes to address similar concerns.
-**docker-compose.yaml** of **docker**, **HCL** of Terraform<<terraform>>, **manifests** of Kubernetes and Kustomize<<kustomize>>, or **Charts** of Helm<<helm>> are such instances.
+These products define their own notations and syntaxes to address similar concerns.
+**HCL** of Terraform<<terraform>>, **manifests** of Kubernetes and Kustomize<<kustomize>>, **docker-compose.yaml** of **docker**, or **Charts** of Helm<<helm>> are such instances.
 
-The syntax is mixture of application specific keyword semantics and common concerns.
-"Common concerns" are in general their own inheritance mechanisms and interpolation mechanisms.
-In case developers think they want to improve human readability, they sometimes even try to come up with completely new notation.
+The syntax is a mixture of application-specific keyword semantics and common concerns.
+"Common concerns" are, in general, their own inheritance mechanisms and interpolation mechanisms.
+When developers think they want to improve human readability of configuration files.
+They sometimes even try to come up with completely new notation.
+This is what happens everywhere in the software industry.
 **HCL** of Terraform is an example for this.
 
 In short, currently, various applications define their own DSLs based on their specifications.
@@ -35,7 +40,7 @@ This will be a notation whose instances are strictly complying with JSON.
 3. After that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
 The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files and resolve inheritances and interpolations defined in them.
 
-This approach allows us to keep using the same tool support, syntax highlighting plugins and other utilities.
+This approach allows us to keep using the same tool support, syntax highlighting plugins, and other utilities.
 For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
 Because it will be a user side concern.
 Only in case they want to uniform how such configurations should be written, or they want to reduce user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
@@ -43,46 +48,31 @@ Only in case they want to uniform how such configurations should be written, or 
 The rest of this paper is organized as follows:
 In <<background>>, we will discuss how the problem of repetitiveness in configuration files and other sorts of files has been addressed, or not addressed.
 In <<technique>>, the details of our approach and the syntax we designed for this approach will be described.
-Then in <<results>>,
-
-<<jq-front>>
-
-Challenges:
-
-- Inheritances,
-- References,
-- Interpolation,
-
-Pains
-
-- Similar, yet different notations and implementations
-- Learning cost everytime diving in a new application
-
-Status Quo Solutions
-
-- Custom Application-specific solutions
-
-Proposed Solution
-
-- Separation of Concerns, Pipelining
-- JSON++, which supports Inheritance, References, Interpolation
-- Most notations are defined as supersets of JSON.
-- Most
-
-The rest of this paper is organized: **Background**, **Technique**, **Result**, and **Conclusion**.
+Then in <<results>>, we look into how much the approach can reduce the size of configuration files by applying it to an actual example.
+In the <<conclusion>>, we will summarize our findings and future works.
 
 [[background]]
 == Background
 
-In software industry, although it is considered important practice to follow "D-R-Y"(Don't repeat yourself)<<dry>>, configuration files and other data files sometimes need to be repetitive.
-For examples, to configure a distributed system, to define test cases, to define characters and stages for a game, we need to define similar yet slightly different files over and over again.
-To achieve design intentions through them, we need to make them comply with constraints applications define to which those files belong.
+In software industry,
+although it is considered important practice to follow the "D-R-Y" (Don't repeat yourself) principle<<dry>>,
+configuration files and other data files sometimes become repetitive.
+For example, to configure a distributed system, to define test cases,
+to define characters and stages for a game, we need to define similar yet slightly different files over and over again.
+Some software products avoid this situation by introducing their own syntax to their configuration file specifications.
+
+In this section, we will discuss configuration files of well-known distributed software system managers.
+Through this,
+we will find these application-specific mechanisms can be replaced by a couple of application neutral mechanisms,
+which are "inheritance" and "interpolation".
 
 **Docker:** For instance, to build an application using `docker`<<docker>> from multiple application images, a user has to write `docker-compose.yaml` file.
 Inside the file, a user has to define node values so that they satisfy constraints which the user application and the platform require.
 
+.`docker-compose.yaml` example (generated by ChatGPT 4)
+[%collapsible]
+====
 [source,yaml]
-.`docker-compose.yaml` example (generated by ChatGPT4)
 ----
 version: '3.9'
 
@@ -138,9 +128,10 @@ volumes:
   db1-data:
   db2-data:
 ----
+====
 
-Designers of `docker-compose` are aware of this challenge, and they created application specific feature for their product called **x-extensions**[<<xExtensionExample>>].
-With a method we will see later in the <<technique>> section, it will be shown that this can be addressed without such application specific mechanisms.
+Designers of `docker-compose` are aware of this challenge, and they created application-specific feature for their product called **x-extensions**[<<xExtensionExample>>].
+With a method we will see later in the <<technique>> section, it will be shown that this can be addressed without such application-specific mechanisms.
 
 [%collapsible]
 ====
@@ -148,6 +139,7 @@ With a method we will see later in the <<technique>> section, it will be shown t
 [source,yaml]
 .**x-extensions example**
 ----
+#file: noinspection YAMLUnusedAnchor
 version: '3.9'
 
 x-webapp-service: &webapp-service
@@ -208,7 +200,7 @@ Kustomize is a Kubernetes-native configuration management tool that allows users
 Following is a folder structure that a user is supposed to define.
 
 [source]
-.Kustomize config files (generated by ChatGPT4)
+.Kustomize config files (generated by ChatGPT 4)
 ----
 my-app/
 ├── base/
@@ -224,12 +216,12 @@ my-app/
         └── patch-deployment.yaml
 ----
 
-These files are quite repetitive, and sometimes it increases maintenance cost significantly.
-As a matter of fact, there are a couple of schools in Kubernetes practitioners community.
-One is **Kustomize** school and the other is **Helm**, which allows to use templating in configuration files.
-Former places importance more on being declarative and clarity over simplicity in descriptions of configuration files, while the latter does the other way around.
+These files are quite repetitive, and it increases maintenance cost significantly.
+There are a couple of schools in the Kubernetes practitioners community about the way to define **Kubernetes** configurations.
+One is the **Kustomize** school and the other is **Helm**, which allows using templating in configuration files.
+The former places importance more on being declarative and clarity over simplicity in descriptions of configuration files, while the latter does the other way around.
 
-.Contents of Kustomize config files (generated by ChatGPT4)
+.Contents of Kustomize config files (generated by ChatGPT 4)
 [%collapsible]
 ====
 [source,yaml]
@@ -260,7 +252,6 @@ spec:
             - name: DATABASE_URL
               value: jdbc:mysql://localhost:3306/mydatabase----
 ----
-====
 
 [source,yaml]
 .Kustomize: `base/service.yaml`:
@@ -352,22 +343,48 @@ spec:
     matchLabels:
       app: my-app
 ----
+====
+
 **Terraform:**
 
-So far, we have discussed only containerization platforms and their application configurations, however, the same thing keeps happening in the software industry.
+So far, we have discussed only containerization platforms and their application configurations.
+However, the same thing keeps happening in the software industry.
 
-For instance, in gaming industry,
+For instance, in the gaming industry,
 
 In
+
+<<jq-front>>
+
+Challenges:
+
+- Inheritances,
+- References,
+- Interpolation,
+
+Pains
+
+- Similar, yet different notations and implementations
+- Expensive learning cost needs to be paid whenever diving in a new application
+
+Status Quo Solutions
+
+- Custom Application-specific solutions
+
+Proposed Solution
+
+- Separation of Concerns, Pipelining
+- JSON++, which supports Inheritance, References, Interpolation
+- Most notations are defined as supersets of JSON.
+- Most
+
 
 [[technique]]
 == Technique
 
 As stated in the **Background** section, the industry has tried to address similar problems over and over again.
-
-One uses YAML, another TOML, yet another comes upt with a new notation such as HCL, HOCON, etc.
-
-To address these challenges, we have created a tool called <<jq-front>>.
+One uses YAML, another TOML, yet another comes up with a new notation such as HCL, HOCON, etc.
+To address these challenges, we have created a tool called **jq-front**<<jq-front>>.
 
 === Separation of Concerns
 
@@ -400,9 +417,9 @@ We named this tool after a pre-processor that converts C{plus}{plus} source code
                                               |    Interpolation   |
                                               |   Handling Module  |
                                               +----------+---------+
-                                                         |
-                                                         :
-                                                         V
+  +----+       +----+                                    |
+  |A{o}+-=---->+B{o}| (A writes to B)                    :
+  +----+       +----+                                    V
                                                      +---+---+
   +----+       +----+                                |Output |
   |A{o}+------>+B{o}| (A reads from B)               |{d}    |
@@ -410,7 +427,8 @@ We named this tool after a pre-processor that converts C{plus}{plus} source code
 ----
 
 It consists of a couple of moules, which are **Inheritance Resolution** and **Interpolation Handling**.
-As their names suggests, once a source file is given to the tool, **Inheritance Resolution** module processes it to resolve inheritances defined in the source, then its output is passed to the **Interpolation Handling** module.
+As their names suggest, once a source file is given to the tool, **Inheritance Resolution** module processes it to resolve inheritances defined in the source.
+Then its output is passed to the **Interpolation Handling** module.
 Each of them has its own internal pipelines.
 In this section, we will be looking into them one by one.
 
@@ -470,22 +488,22 @@ Each of them is designed to serve for different responsibilities.
               |                                       +--+--+                          |
               |                                          |                             |
               +------------------------------------------|-----------------------------+
-                                                         :
-                                                         V
-                                                    +----+----+
-  +----+       +----+                               |Work(2 a)|
-  |A{o}+------>+B{o}| (A reads from B)              |{d}      |
-  +----+       +----+                               +----+----+
+  +----+       +----+                                    |
+  |A{o}+-=---->+B{o}| (A writes to B)                    :
+  +----+       +----+                                    V
+                                                     +---+---+
+  +----+       +----+                                |Output |
+  |A{o}+------>+B{o}| (A reads from B)               |{d}    |
+  +----+       +----+                                +---+---+
 ----
 
-File Level Inheritance:: In the file level inheritance resolution, it reads a given source file and it traces the files on `JF_PATH` environment variable.
+File Level Inheritance:: In the file level inheritance resolution, it reads a given source file, and it traces the files on `JF_PATH` environment variable.
 Through this process, a file **Work (1)** in the Figure <<Inheritance>>, will be generated and its content will be as follows.
 
 [source,json]
 .Content of a temporary file: "Work (1)"
 ----
 {
-  "$extends": [ "base.json++" ],
   "$local": {
     "A": {
       "eval:$(echo -n Key)": "eval:$(ref .test.k)"
@@ -516,32 +534,24 @@ Thus, exactly the same syntax and behavior is available, when a data designer pl
 
 `ref` is a built-in function of the processor, and it prints a value of a node specified by an argument passed to it.
 
+Node Level Inheritance:: A node `.test` has `$extends` directive in it.
+Its value is an array whose only element is `A`.
+It extends the content of `A`, whose content was seen earlier in this section.
+After this inheritance is processed, the output of this step (Work (2 a)) will look like as follows.
 
-Node Level Inheritance:: t.b.d.
-
-[source, json]
-.Content of File: `Work(2 b)`
+[source,json]
+.Content of a temporary file: "Work (2 a)"
 ----
 {
   "test": {
-    "k": "hello",
-    "Hello": "eval:$(ref .test.k)"
+    "eval:$(echo -n Key)": "eval:$(ref .test.k)",
+    "k": "hello"
   },
   "base": "world"
 }
 ----
 
-[source, json]
-.Content of Output
-----
-{
-  "test": {
-    "k": "hello",
-    "Hello": "hello"
-  },
-  "base": "world"
-}
-----
+
 
 === Interpolation Mechanism
 
@@ -574,28 +584,53 @@ Node Level Inheritance:: t.b.d.
                                               |       +--+--+      |
                                               |          :         |
                                               +----------|---------+
-                                                         |
-                                                         :
-                                                         V
+  +----+       +----+                                    |
+  |A{o}+-=---->+B{o}| (A writes to B)                    :
+  +----+       +----+                                    V
                                                      +---+---+
   +----+       +----+                                |Output |
   |A{o}+------>+B{o}| (A reads from B)               |{d}    |
   +----+       +----+                                +---+---+
 ----
 
+[source,json]
+.Content of File: `Work(2 b)`
+----
+{
+  "test": {
+    "k": "hello",
+    "Hello": "eval:$(ref .test.k)"
+  },
+  "base": "world"
+}
+----
+
+[source,json]
+.Content of Output
+----
+{
+  "test": {
+    "k": "hello",
+    "Hello": "hello"
+  },
+  "base": "world"
+}
+----
+
 === Pipelined Approach
 
-Conventional approaches disccussed in <<background>> section do not identify concerns such as readability for humans and that for machines as independent ones.
+Conventional approaches in <<background>> section do not identify concerns such as readability for humans and that for machines as independent ones.
+Instead, they process configuration files in a monolithic single step.
 
 [mermaid]
-.Conventional Approach
+.Conventional Monolithic Approach
 ----
 graph LR
     App((Application))    -->|read| AppData[A: Custom Representation]
     App -->|Internally process data| App
 ----
 
-An application reads configuration files, resolves references and inheritances, and it interprets their contents based on application specific semantics.
+An application reads configuration files, resolves references and inheritances, and it interprets their contents based on application-specific semantics.
 Based on the interpreted information, it performs required operations.
 These are executed as a single and indivisible action.
 
@@ -614,13 +649,16 @@ graph LR
 
 [[results]]
 == Results
+
 (t.b.d.)
 
 [[conclusion]]
 == Conclusion
+
 (t.b.d.)
 
 === Limitations
+
 (t.b.d.)
 
 === Future Works
@@ -637,9 +675,9 @@ That is, what should happen when different types of nodes are found at the same 
 - [[[jq-front, 1]]] jq-front project in github.org. https://github.com/dakusui/jq-front[jq-front]:
 2019
 - [[[Cfront, 2]]] Cfront article in Wiki[edia https://en.wikipedia.org/wiki/Cfront
-- [[[dry, 3]]] Hunt, Andrew; Thomas, David (1999).
-The Pragmatic Programmer : From Journeyman to Master (1 edition).
-US: Addison-Wesley. pp. 320. ISBN 978-0201616224
+- [[[dry, 3]]] Hunt, Andrew, Thomas, David (1999).
+The Pragmatic Programmer : From Journeyman to Master (the first edition).
+US: Addison-Wesley. pp. 320. ISBN 978–0201616224
 - [[[hocon, 8]]] HOCON (Human-Optimized Config Object Notation) https://github.com/lightbend/config[HOCON]:2020
 - [[[docker, 9]]] Kubernetes t.b.d.
 - [[[k8s, 10]]] Kubernetes t.b.d.
