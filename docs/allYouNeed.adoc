@@ -16,7 +16,7 @@ Finally, it will be shown that the size of configuration information can be redu
 
 **Status Quo:** Not a few similar yet different notations have been proposed and applied to various software products to describe information with complex structures and constraints.
 
-This is found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions such as **docker**<<docker>>, **Kubernetes**<<k8s>>, and its related products.
+This is a situation found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions such as **docker**<<docker>>, **Kubernetes**<<k8s>>, and its related products.
 These products define their own notations and syntaxes to address similar concerns.
 **HCL** of Terraform<<terraform>>, **manifests** of Kubernetes and Kustomize<<kustomize>>, **docker-compose.yaml** of **docker**, or **Charts** of Helm<<helm>> are such instances.
 
@@ -394,6 +394,18 @@ Those notations allow users not to quote strings, where obvious from the context
 
 === New Notation: JSON++
 
+Through examining various notations, authours realized that the functionalities designed and implemented over and over again at the every corner of the industry are essentially:
+
+* Inheritances
+* Interpolations
+
+Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, are designed to be "superset" of **JSON**.
+
+*JSON{plus}{plus}* is a notation to implement the features but within the syntax of **JSON** by introducing a few keywords that have special semantics.
+
+
+=== JSON++ processor: jq-front
+
 We implemented a processor **jq-front**<<jq-front>>, that converts data written in JSON{plus}{plus} into plain JSON.
 We named this tool after a pre-processor that converts C{plus}{plus} source code into plain C source code, **Cfront**<<Cfront>>.
 
@@ -497,6 +509,9 @@ Each of them is designed to serve for different responsibilities.
   +----+       +----+                                +---+---+
 ----
 
+In this working example, only one file is specified in the `$extends` directive.
+When more than one files are specified, and they are extending other files, the inheritance resolution will happen in a manner of "width-first" way.
+
 File Level Inheritance:: In the file level inheritance resolution, it reads a given source file, and it traces the files on `JF_PATH` environment variable.
 Through this process, a file **Work (1)** in the Figure <<Inheritance>>, will be generated and its content will be as follows.
 
@@ -551,9 +566,11 @@ After this inheritance is processed, the output of this step (Work (2 a)) will l
 }
 ----
 
-
-
 === Interpolation Mechanism
+
+After inheritances are processed, "interpolation" mechanism will be executed.
+This stage consists of two steps,
+which are "key-side" processing and "value-side" processing.
 
 [ditaa]
 .Interpolation Mechanism
@@ -593,6 +610,26 @@ After this inheritance is processed, the output of this step (Work (2 a)) will l
   +----+       +----+                                +---+---+
 ----
 
+In these steps, string values which start with `eval:` will be replaced with the value computed from the string right next to it.
+That is,
+if you have a string value:
+
+----
+"key": "eval:string:$(echo 'Hello') world"
+----
+
+The part `string:` specifies the type of the node after interpolation happened.
+You can specify one of `string`, `number`, `bool`, `array`, and `object`.
+Otherwise, it will be treated as `string`.
+The part `$(echo 'Hello')` will be evaluated and embedded at the JSON path, instead of the original string, which will result in:
+
+----
+"key": "Hello world"
+----
+
+Key-side processing:: As the name suggests, this step processes the keys starting with `eval:`.
+After this process is performed, the file will like as follows:
+
 [source,json]
 .Content of File: `Work(2 b)`
 ----
@@ -604,6 +641,9 @@ After this inheritance is processed, the output of this step (Work (2 a)) will l
   "base": "world"
 }
 ----
+
+Value-side processing:: This step performs the string value interpolation the same as **Key-side processing**,
+but for values of JSON object.
 
 [source,json]
 .Content of Output
@@ -620,14 +660,15 @@ After this inheritance is processed, the output of this step (Work (2 a)) will l
 === Pipelined Approach
 
 Conventional approaches in <<background>> section do not identify concerns such as readability for humans and that for machines as independent ones.
-Instead, they process configuration files in a monolithic single step.
+Instead, they process configuration files in a monolithic single step Fig. <<monolithic>>.
 
+[[monolithic]]
 [mermaid]
 .Conventional Monolithic Approach
 ----
 graph LR
     App((Application))    -->|read| AppData[A: Custom Representation]
-    App -->|Internally process data| App
+    App -->|Parse, Process Inheritances, and Interpolatiopns| App
 ----
 
 An application reads configuration files, resolves references and inheritances, and it interprets their contents based on application-specific semantics.
@@ -640,6 +681,11 @@ Instead, the approach we are proposing separates these concerns independent and 
 .Proposed Approach
 ----
 graph LR
+    subgraph process
+      toJSON
+      jq-front
+      App
+    end
     toJSON((1: toJSON))      -->|read| AppData[A: HCL, YAML, etc.. ]
     toJSON                  -.->|write| JSON++[B: JSON++]
     jq-front((2: jq-front))  -->|read| JSON++
@@ -678,10 +724,10 @@ That is, what should happen when different types of nodes are found at the same 
 - [[[dry, 3]]] Hunt, Andrew, Thomas, David (1999).
 The Pragmatic Programmer : From Journeyman to Master (the first edition).
 US: Addison-Wesley. pp. 320. ISBN 978–0201616224
-- [[[hocon, 8]]] HOCON (Human-Optimized Config Object Notation) https://github.com/lightbend/config[HOCON]:2020
-- [[[docker, 9]]] Kubernetes t.b.d.
-- [[[k8s, 10]]] Kubernetes t.b.d.
-- [[[terraform, 11]]] Kubernetes t.b.d.
-- [[[helm, 12]]] Helm t.b.d.
-- [[[kustomize, 13]]] Kustomize t.b.d.
-- [[[runn, 14]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml
+- [[[hocon, 4]]] HOCON (Human-Optimized Config Object Notation), https://github.com/lightbend/config[HOCON], 2020
+- [[[docker, 5]]] docker t.b.d.
+- [[[k8s, 6]]] Kubernetes t.b.d.
+- [[[terraform, 7]]] Terraform t.b.d.
+- [[[helm, 8]]] Helm t.b.d.
+- [[[kustomize, 9]]] Kustomize t.b.d.
+- [[[runn, 10]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml[runn]
