@@ -32,7 +32,7 @@ However, they share common concerns and keep addressing similar problems repetit
 This situation can be found not only in configurations of distributed systems.
 In testing automation, test cases are defined using a custom DSL.
 
-In this article, we will propose a method, where:
+**Proposed Method:** In this article, we will propose a method, where:
 
 1. We consider human readability and conciseness are completely separate concerns.
 2. Then, we will focus on the latter and propose a notation **JSON{plus}{plus}**.
@@ -392,17 +392,22 @@ In our approach, we identify the human readability and the capability to make th
 Being able to reduce repetitions might improve the human-readability as a result as a result, still it is different from the readability improvement delivered by YAML,TOML, HCL, and other sorts of super-JSON notations.
 Those notations allow users not to quote strings, where obvious from the context.
 
-=== New Notation: JSON++
+=== New Notation: JSON{plus}{plus}
 
-Through examining various notations, authours realized that the functionalities designed and implemented over and over again at the every corner of the industry are essentially:
+Through examining various notations, authors realized that the functionalities designed and implemented over and over again at the every corner of the industry are essentially:
 
 * Inheritances
 * Interpolations
 
 Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, are designed to be "superset" of **JSON**.
+Also, tools to convert them into **JSON** are available.
 
 *JSON{plus}{plus}* is a notation to implement the features but within the syntax of **JSON** by introducing a few keywords that have special semantics.
 
+As it is designed to bestrictly compliant with **JSON**, we do not need to re-implement tools to edit or manipulate it.
+We can just reuse such tools developed for **JSON**.
+Applications will not need to develop its own custom configuration format.
+They will just choose one of preferred formats from **YAML**, **TOML**, etc. and define built-in files to ease user's effort.
 
 === JSON++ processor: jq-front
 
