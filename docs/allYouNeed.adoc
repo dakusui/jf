@@ -2,9 +2,7 @@
 
 = JSON++ is All You Need
 
-**Abstract:** In various areas of software development,
-to describe information with complex structures and constraints,
-a number of similar but different notations have been proposed and used.
+**Abstract:** In various areas of software development, to describe information with complex structures and constraints, a number of similar but different notations have been proposed and used.
 This is especially frequent in configurations of distributed systems.
 In this article, we strictly identify a notation's human-readability and functionality are different ones.
 Then, we introduce a notation which focuses on the latter, called **JSON{plus}{plus}**.
@@ -54,17 +52,12 @@ In the <<conclusion>>, we will summarize our findings and future works.
 [[background]]
 == Background
 
-In software industry,
-although it is considered important practice to follow the "D-R-Y" (Don't repeat yourself) principle<<dry>>,
-configuration files and other data files sometimes become repetitive.
-For example, to configure a distributed system, to define test cases,
-to define characters and stages for a game, we need to define similar yet slightly different files over and over again.
+In software industry, although it is considered important practice to follow the "D-R-Y" (Don't repeat yourself) principle<<dry>>, configuration files and other data files sometimes become repetitive.
+For example, to configure a distributed system, to define test cases, to define characters and stages for a game, we need to define similar yet slightly different files over and over again.
 Some software products avoid this situation by introducing their own syntax to their configuration file specifications.
 
 In this section, we will discuss configuration files of well-known distributed software system managers.
-Through this,
-we will find these application-specific mechanisms can be replaced by a couple of application neutral mechanisms,
-which are "inheritance" and "interpolation".
+Through this, we will find these application-specific mechanisms can be replaced by a couple of application neutral mechanisms, which are "inheritance" and "interpolation".
 
 **Docker:** For instance, to build an application using `docker`<<docker>> from multiple application images, a user has to write `docker-compose.yaml` file.
 Inside the file, a user has to define node values so that they satisfy constraints which the user application and the platform require.
@@ -378,7 +371,6 @@ Proposed Solution
 - Most notations are defined as supersets of JSON.
 - Most
 
-
 [[technique]]
 == Technique
 
@@ -574,8 +566,7 @@ After this inheritance is processed, the output of this step (Work (2 a)) will l
 === Interpolation Mechanism
 
 After inheritances are processed, "interpolation" mechanism will be executed.
-This stage consists of two steps,
-which are "key-side" processing and "value-side" processing.
+This stage consists of two steps, which are "key-side" processing and "value-side" processing.
 
 [ditaa]
 .Interpolation Mechanism
@@ -616,8 +607,7 @@ which are "key-side" processing and "value-side" processing.
 ----
 
 In these steps, string values which start with `eval:` will be replaced with the value computed from the string right next to it.
-That is,
-if you have a string value:
+That is, if you have a string value:
 
 ----
 "key": "eval:string:$(echo 'Hello') world"
@@ -647,8 +637,7 @@ After this process is performed, the file will like as follows:
 }
 ----
 
-Value-side processing:: This step performs the string value interpolation the same as **Key-side processing**,
-but for values of JSON object.
+Value-side processing:: This step performs the string value interpolation the same as **Key-side processing**, but for values of JSON object.
 
 [source,json]
 .Content of Output
@@ -667,13 +656,13 @@ but for values of JSON object.
 Conventional approaches in <<background>> section do not identify concerns such as readability for humans and that for machines as independent ones.
 Instead, they process configuration files in a monolithic single step Fig. <<monolithic>>.
 
-[[monolithic]]
+[[monolithic, 1]]
 [mermaid]
 .Conventional Monolithic Approach
 ----
 graph LR
     App((Application))    -->|read| AppData[A: Custom Representation]
-    App -->|Parse, Process Inheritances, and Interpolatiopns| App
+    App -->|Parse Input, Process Inheritances and Interpolatiopns, and Perform Business Logic| App
 ----
 
 An application reads configuration files, resolves references and inheritances, and it interprets their contents based on application-specific semantics.
@@ -683,7 +672,7 @@ These are executed as a single and indivisible action.
 Instead, the approach we are proposing separates these concerns independent and executable one by one.
 
 [mermaid]
-.Proposed Approach
+.Proposed "Pipelined" Approach
 ----
 graph LR
     subgraph process
@@ -696,6 +685,7 @@ graph LR
     jq-front((2: jq-front))  -->|read| JSON++
     jq-front                -.->|write| JSON[C: JSON]
     App((3: Application))    -->|read| JSON
+    App                      -->|Perform Business Logic| App
 ----
 
 [[results]]
@@ -705,8 +695,6 @@ In this section, we will apply our method to a couple of existing software produ
 **Kustomize** and **commandunit**, both of which are using *YAML* as their configuration language.
 
 === `Kustomize`
-
-
 
 === `commandunit`
 
@@ -769,7 +757,7 @@ then:
 ----
 ====
 
-[source, yaml]
+[source,yaml]
 ----
 ---
 "$extends":
@@ -797,7 +785,7 @@ then:
 
 [%collapsible]
 ====
-[source, json]
+[source,json]
 .`base/normal.json`
 ----
 {
