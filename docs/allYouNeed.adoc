@@ -7,28 +7,21 @@ This is especially frequent in configurations of distributed systems.
 In this article, we strictly identify a notation's human-readability and functionality are different ones.
 Then, we introduce a notation which focuses on the latter, called **JSON{plus}{plus}**.
 Based on it, we demonstrate a pipeline-based approach is possible, where data defined in human-readability focused notations such as **YAML** and **HCL** are transformed into **JSON{plus}{plus}**.
-Finally, it will be shown that the size of configuration information can be reduced down to under 20% of the original size without loosing necessary information yet delivering flexibility and clarity using a working example.
+Finally, it will be shown that such DRY features can be expressed by **JSON{plus}{plus}** syntax in a uniformed way, which reduces learning cost for users and allows for developers to focus on human-readability of the notations.
 
 [[introduction]]
 == Introduction
 
 **Status Quo:** Not a few similar yet different notations have been proposed and applied to various software products to describe information with complex structures and constraints.
 
-This is a situation found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions such as **docker**<<docker>>, **Kubernetes**<<k8s>>, and its related products.
-These products define their own notations and syntaxes to address similar concerns.
-**HCL** of Terraform<<terraform>>, **manifests** of Kubernetes and Kustomize<<kustomize>>, **docker-compose.yaml** of **docker**, or **Charts** of Helm<<helm>> are such instances.
+This is a situation found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions.
+There are tools to manage instances under **docker**<<docker>>, **Kubernetes**<<k8s>>.
+Most of them use **YAML**<<kustomize>><<helm>><<docker-compose>>, but **Terraform**<<terraform>> uses its own notation; **HCL**.
+Not only that, in testing, **runn** uses YAML<<yaml>>, while **Cucumber**<<cucumber>> uses **Gherkin**<<gherkin>>.
+Another notation is **TOML**, which is used for building python projects<<pyproject>>, configuring blog system<<hugo>>, etc.
 
-The syntax is a mixture of application-specific keyword semantics and common concerns.
-"Common concerns" are, in general, their own inheritance mechanisms and interpolation mechanisms.
-When developers think they want to improve human readability of configuration files.
-They sometimes even try to come up with completely new notation.
-This is what happens everywhere in the software industry.
-**HCL** of Terraform is an example for this.
-
-In short, currently, various applications define their own DSLs based on their specifications.
+In short, currently, various applications use various notations to define their own DSLs for configurations and tests.
 However, they share common concerns and keep addressing similar problems repetitively, which is inefficient, error-prone, and raising learning costs for users.
-This situation can be found not only in configurations of distributed systems.
-In testing automation, test cases are defined using a custom DSL.
 
 **Proposed Method:** In this article, we will propose a method, where:
 
@@ -38,7 +31,9 @@ This will be a notation whose instances are strictly complying with JSON.
 3. After that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
 The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files and resolve inheritances and interpolations defined in them.
 
-This approach allows us to keep using the same tool support, syntax highlighting plugins, and other utilities.
+**Evaluation and Results:** In the <<results>> section, we will show case-study results, where the method is applied to a few real-world examples, such as **TOML** used in `pyproject.toml`, tests written in **Gherkin** and **YAML**,
+
+This approach allows us to keep using the already existing tool support, such as syntax highlighting plugins, refactoring feature of editors, and other utilities.
 For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
 Because it will be a user side concern.
 Only in case they want to uniform how such configurations should be written, or they want to reduce user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
@@ -371,6 +366,24 @@ Proposed Solution
 - Most notations are defined as supersets of JSON.
 - Most
 
+|===
+| Feature                      | YAML                        | TOML                       | HOCON                      | HCL                          | Gherkin                   | XML
+
+| **Single Inheritance**       | ✔️ (using anchors/aliases)   | ❌ (no direct support)      | ✔️ (using object merging)   | ✔️ (using modules)            | ❌ (no direct support)     | ⚠️ (using DTD or XSD, limited)
+
+| **Multiple Inheritance**     | ⚠️ (with merge arrays but limited) | ❌ (no direct support)      | ✔️ (using fallbacks/merging) | ❌ (no direct support, can be simulated by combining modules) | ❌ (no direct support) | ❌ (no direct support)
+
+| **Nested Inheritance**       | ✔️ (with layered anchors)   | ❌ (no direct support)      | ✔️ (layered object merging) | ⚠️ (limited support via module chaining) | ❌ (no direct support) | ⚠️ (using nested elements, limited)
+
+| **Node References**          | ✔️ (anchors/aliases for references) | ❌ (no direct support)      | ✔️ (substitution with `${}` syntax) | ✔️ (expressions and variable references) | ❌ (no direct support) | ⚠️ (using XPointer or XPath, limited)
+
+| **Limitations of Multiple Inheritance** | Limited by merge key order; complex configurations can become difficult to read | Not supported natively; manual repetition required | Supported but can be complex in deeply nested structures | Not directly supported; combining modules is complex | Not supported; only supports simple statements | Not supported; merging different schemas requires external processing
+
+| **Relationship with JSON**   | ✔️ (YAML is a superset)     | ❌ (not a superset)         | ✔️ (HOCON is a superset)    | ❌ (not a superset)           | ❌ (not a superset)        | ❌ (not a superset, but can be converted)
+
+| **Tool to Convert to JSON**  | PyYAML, js-yaml (JavaScript) | TomlKit, toml (Python)     | Lightbend Config (Scala/Java), pyhocon (Python) | hcl2json (Go)                | Cucumber (with JSON formatter) | xmltodict (Python), xml2js (JavaScript)
+|===
+
 [[technique]]
 == Technique
 
@@ -450,7 +463,7 @@ For the sake of the discussion, we assume we have the following files in the cur
   "$extends": [ "base.json++" ],
   "$local": {
     "A": {
-      "eval:$(echo -n Hello)": "eval:$(ref .test.k)"
+      "eval:$(echo -n Hello)": "eval:string:$(ref .test.k)"
     }
   },
   "test": {
@@ -518,7 +531,7 @@ Through this process, a file **Work (1)** in the Figure <<Inheritance>>, will be
 {
   "$local": {
     "A": {
-      "eval:$(echo -n Key)": "eval:$(ref .test.k)"
+      "eval:$(echo -n Key)": "eval:string:$(ref .test.k)"
     }
   },
   "test": {
@@ -540,7 +553,7 @@ Thus, exactly the same syntax and behavior is available, when a data designer pl
 .The content of file "A"
 ----
 {
-  "eval:$(echo -n Key)": "eval:$(ref .test.k)"
+  "eval:$(echo -n Key)": "eval:string:$(ref .test.k)"
 }
 ----
 
@@ -556,7 +569,7 @@ After this inheritance is processed, the output of this step (Work (2 a)) will l
 ----
 {
   "test": {
-    "eval:$(echo -n Key)": "eval:$(ref .test.k)",
+    "eval:$(echo -n Key)": "eval:string:$(ref .test.k)",
     "k": "hello"
   },
   "base": "world"
@@ -616,7 +629,9 @@ That is, if you have a string value:
 The part `string:` specifies the type of the node after interpolation happened.
 You can specify one of `string`, `number`, `bool`, `array`, and `object`.
 Otherwise, it will be treated as `string`.
-The part `$(echo 'Hello')` will be evaluated and embedded at the JSON path, instead of the original string, which will result in:
+The part `$(echo 'Hello')` will be evaluated and embedded at the JSON path, instead of the original string, which will result infootnote:rawKeyword[To "escape" a string starting with `eval:`, you can use `raw:` keyword.
+With it, you can describe such a string as:
+`"eval:string:$(echo 'Hello') world"`.]:
 
 ----
 "key": "Hello world"
@@ -671,14 +686,14 @@ These are executed as a single and indivisible action.
 
 Instead, the approach we are proposing separates these concerns independent and executable one by one.
 
+[[pipelinedApproach]]
 [mermaid]
 .Proposed "Pipelined" Approach
 ----
 graph LR
-    subgraph process
+    subgraph preprocess
       toJSON
       jq-front
-      App
     end
     toJSON((1: toJSON))      -->|read| AppData[A: HCL, YAML, etc.. ]
     toJSON                  -.->|write| JSON++[B: JSON++]
@@ -688,13 +703,70 @@ graph LR
     App                      -->|Perform Business Logic| App
 ----
 
+In the Figure <<pipelinedApproach>>, it is assumed that the application uses **YAML** or **HCL**, which are supersets of **JSON**.
+If the application uses a notation which is not a super set of **JSON**, it needs to be converted back to the original one.
+
 [[results]]
 == Results
 
-In this section, we will apply our method to a couple of existing software products;
-**Kustomize** and **commandunit**, both of which are using *YAML* as their configuration language.
+In this section, we will apply our method to a few existing software products;
+**pyproject**, **Cucumber**, and **commandunit**, each of uses **TOML**, **Gherkin**, and **YAML**.
 
-=== `Kustomize`
+=== `pyproject.toml`
+
+[%collapsible]
+====
+[source,toml]
+----
+[tool.poetry]
+name = "my_project"
+version = "0.1.0"
+description = "An example project showing pyproject.toml redundancy"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.25.1"
+
+[tool.poetry.dev-dependencies]
+black = "^22.3.0"
+isort = "^5.10.1"
+mypy = "^0.910"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# Repetition in tool-specific configurations
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_third_party = ["requests"]
+
+[tool.mypy]
+python_version = 3.8
+ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["my_project"]
+
+[tool.coverage.report]
+fail_under = 80
+omit = [
+    "tests/*",
+]
+
+[tool.flake8]
+max-line-length = 88
+ignore = ["E203", "W503"]
+----
+====
 
 === `commandunit`
 
@@ -705,6 +777,7 @@ It allows users to write tests in given-when-then style using YAML.
 ====
 [source,yaml]
 ----
+#file: noinspection YAMLIncompatibleTypes
 ---
 type: NORMAL
 description: []
@@ -759,6 +832,7 @@ then:
 
 [source,yaml]
 ----
+#file: noinspection YAMLIncompatibleTypes
 ---
 "$extends":
   - core/base.json
@@ -808,8 +882,8 @@ then:
     "source": [
     ],
     "environmentVariables": {
-      "COMMANDUNIT_DEPENDENCIES_ROOT": "eval:${COMMANDUNIT_BUILTIN_ROOT}",
-      "COMMANDUNIT_BUILTIN_ROOT": "eval:${COMMANDUNIT_DEPENDENCIES_ROOT}x"
+      "COMMANDUNIT_DEPENDENCIES_ROOT": "eval:string:${COMMANDUNIT_BUILTIN_ROOT}",
+      "COMMANDUNIT_BUILTIN_ROOT": "eval:string:${COMMANDUNIT_DEPENDENCIES_ROOT}x"
     },
     "cmd": ":",
     "args": [
@@ -861,18 +935,28 @@ then:
 ----
 ====
 
+NOTE:: This approach doesn't require IDE support for JSON++ as it is just a subset of JSON.
+No intrusion
+
 [[conclusion]]
 == Conclusion
 
 (t.b.d.)
 
-=== Limitations
+=== Limitation
 
-(t.b.d.)
+An application sometimes defines its own syntax on top of the notation it uses for configuration.
+We expect such a syntax to be simplified and uniformed by applying our approach.
+However, this benefit was not examined in this study.
+
+Multi-key handling::
+In case a notation has a feature, which cannot be represented in **JSON**; this approach requires extra treatment.
+For example, **YAML** allows to define entries with the same key multiple times, which is not valid in **JSON**.
+In such cases, we will need to introduce a convention that interprets it into **JSON**, and converts it back to **YAML**, safely.
 
 === Future Works
 
-Implementation in faster and more reliable languages such as Java, golang, or Rust.
+Implementation in faster and more reliable languages such as **Java**, **Golang**, **Rust**, or whatever else is desired.
 Sandboxing.
 
 Refining finer details such as semantics on multiple inheritances.
@@ -889,8 +973,15 @@ The Pragmatic Programmer : From Journeyman to Master (the first edition).
 US: Addison-Wesley. pp. 320. ISBN 978–0201616224
 - [[[hocon, 4]]] HOCON (Human-Optimized Config Object Notation), https://github.com/lightbend/config[HOCON], 2020
 - [[[docker, 5]]] docker t.b.d.
-- [[[k8s, 6]]] Kubernetes t.b.d.
-- [[[terraform, 7]]] Terraform t.b.d.
-- [[[helm, 8]]] Helm t.b.d.
-- [[[kustomize, 9]]] Kustomize t.b.d.
-- [[[runn, 10]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml[runn]
+- [[[docker-compose, 6]]] docker-compose t.b.d.
+- [[[k8s, 7]]] Kubernetes t.b.d.
+- [[[yaml, 8]]] https://yaml.org/[YAML]
+- [[[terraform, 9]]] Terraform t.b.d.
+- [[[helm, 10]]] Helm t.b.d.
+- [[[kustomize, 11]]] Kustomize t.b.d.
+- [[[runn, 12]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml[runn]
+- [[[cucumber, 13]]] https://cucumber.io/docs/[cucumber]
+- [[[gherkin, 14]]] https://cucumber.io/docs/gherkin/[gherkin]
+- [[[toml, 15]]] t.b.d.
+- [[[pyproject, 16]]] t.b.d.
+- [[[hugo, 17]]] t.b.d.
