@@ -489,6 +489,7 @@ For the sake of the discussion, we assume we have the following files in the cur
 One is "file level inheritance handling", another is "local node materialization", and the third is "node level inheritance".
 Each of them is designed to serve for different responsibilities.
 
+[[inheritance]]
 [ditaa]
 .Inheritance Mechanism
 ----
@@ -523,7 +524,7 @@ In this working example, only one file is specified in the `$extends` directive.
 When more than one files are specified, and they are extending other files, the inheritance resolution will happen in a manner of "width-first" way.
 
 File Level Inheritance:: In the file level inheritance resolution, it reads a given source file, and it traces the files on `JF_PATH` environment variable.
-Through this process, a file **Work (1)** in the Figure <<Inheritance>>, will be generated and its content will be as follows.
+Through this process, a file **Work (1)** in the Figure <<inheritance>>, will be generated and its content will be as follows.
 
 [source,json]
 .Content of a temporary file: "Work (1)"
