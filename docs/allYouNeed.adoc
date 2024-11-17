@@ -1,3 +1,4 @@
+// suppress inspection "GrazieInspection" for whole file
 :toc:
 
 = JSON++ is All You Need
@@ -25,15 +26,17 @@ However, they share common concerns and keep addressing similar problems repetit
 
 **Proposed Method:** In this article, we will propose a method, where:
 
-1. We consider human readability and conciseness are completely separate concerns.
-2. Then, we will focus on the latter and propose a notation **JSON{plus}{plus}**.
+1. We consider human-readability and conciseness are completely separate concerns.
+"Conciseness" here means the ability to describe structured information without redundancy under a given grammarfootnote:humanReadability[Verboseness of the grammar should be addressed as a part of human-readability and achieved by the design of the grammar.].
+2. Then, we will focus on the concise and propose a notation **JSON{plus}{plus}**.
 This will be a notation whose instances are strictly complying with JSON.
 3. After that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
 The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files and resolve inheritances and interpolations defined in them.
 
 **Evaluation and Results:** In the <<results>> section, we will show case-study results, where the method is applied to a few real-world examples, such as **TOML** used in `pyproject.toml`, tests written in **Gherkin** and **YAML**,
 
-This approach allows us to keep using the already existing tool support, such as syntax highlighting plugins, refactoring feature of editors, and other utilities.
+This approach allows us to keep using the already existing tool supports,
+such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
 For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
 Because it will be a user side concern.
 Only in case they want to uniform how such configurations should be written, or they want to reduce user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
@@ -47,12 +50,34 @@ In the <<conclusion>>, we will summarize our findings and future works.
 [[background]]
 == Background
 
-In software industry, although it is considered important practice to follow the "D-R-Y" (Don't repeat yourself) principle<<dry>>, configuration files and other data files sometimes become repetitive.
-For example, to configure a distributed system, to define test cases, to define characters and stages for a game, we need to define similar yet slightly different files over and over again.
-Some software products avoid this situation by introducing their own syntax to their configuration file specifications.
+In software industry, although it is considered important practice to follow the "D-R-Y" (Don't repeat yourself) principle<<dry>>, configuration files and other data files sometimes become repetitive and hard to maintain.
+For example, to configure a distributed system, to define test cases, or to define characters and stages for a game, we need to describe similar yet slightly different files over and over again.
 
-In this section, we will discuss configuration files of well-known distributed software system managers.
-Through this, we will find these application-specific mechanisms can be replaced by a couple of application neutral mechanisms, which are "inheritance" and "interpolation".
+For applications developed in those areas, various notations have been developed and used.
+Such as **YAML**, **TOML**, **HOCON**, **HCL**, **Gherkin**, etc.
+
+In order to mitigate the redundant descriptions, some of them have features to define information using concepts of inheritances and references.
+Not only that, some software products avoid this situation by introducing their own syntax sugars to their configuration file specifications.
+
+Figure <<figure.statusQuo>> shows this situation as a model.
+
+[[figure.statusQuo, 1.]]
+.Status Quo
+image::images/figure-1.svg[statusQuo, align="center"]
+
+Each notation may have inheritances and references as its own features.
+Not only that, each application may have inheritances and node references as its feature to help its users.
+On top of that, they may have syntax sugars if the designer thinks it's necessary to help their users.
+
+This creates following challenges in the industry.
+
+* Application developers need to implement common features such as inheritances and reference resolutions for each product every time.
+* The same feature is implemented using different syntaxes of the host notation, or a syntax the application defines.
+This increases learning costs of application specifications.
+* Semantics of the same feature can be subtly different, which will sometimes result in expensive costs.
+For instance, multiple inheritance is necessary to reduce redundancy in configuration files.
+However, is it implemented using depth first search or width first search?
+This can create a discrepancy in users/operators mind about a product's expected behaviors.
 
 |===
 | Feature| YAML| TOML| HOCON| HCL| Gherkin| XML
@@ -86,7 +111,9 @@ It can be simulated by combining modules) | ❌ (no direct support) | ❌ (no di
 From this matrix, you may think that **HOCON** provides all the necessary functionalities.
 However, it still has the following challenges in practice.
 
-* t.b.d.
+* **HOCON** is a much less popular notation than **YAML**.
+* It doesn't allow to define a function so that a formula to compute a node value can be reused.
+* It is
 
 Thus, we can state that there is no good solution to this problem.
 
@@ -336,7 +363,7 @@ That is, if you have a string value:
 The part `string:` specifies the type of the node after interpolation happened.
 You can specify one of `string`, `number`, `bool`, `array`, and `object`.
 Otherwise, it will be treated as `string`.
-The part `$(echo 'Hello')` will be evaluated and embedded at the JSON path, instead of the original string, which will result infootnote:rawKeyword[To "escape" a string starting with `eval:`, you can use `raw:` keyword.
+The part `$(echo 'Hello')` will be evaluated and embedded at the JSON path, instead of the original string, which will result in footnote:rawKeyword[To "escape" a string starting with `eval:`, you can use `raw:` keyword.
 With it, you can describe such a string as:
 `"eval:string:$(echo 'Hello') world"`.]:
 
@@ -393,25 +420,13 @@ These are executed as a single and indivisible action.
 
 Instead, the approach we are proposing separates these concerns independent and executable one by one.
 
-[[pipelinedApproach]]
+[[pipelinedApproach, 5.]]
 [mermaid]
 .Proposed "Pipelined" Approach
-----
-graph LR
-    subgraph preprocess
-      toJSON
-      jq-front
-    end
-    toJSON((1: toJSON))      -->|read| AppData[A: HCL, YAML, etc.. ]
-    toJSON                  -.->|write| JSON++[B: JSON++]
-    jq-front((2: jq-front))  -->|read| JSON++
-    jq-front                -.->|write| JSON[C: JSON]
-    App((3: Application))    -->|read| JSON
-    App                      -->|Perform Business Logic| App
-----
+image::images/figure-2.svg[align="center"]
 
 In the Figure <<pipelinedApproach>>, it is assumed that the application uses **YAML** or **HCL**, which are supersets of **JSON**.
-If the application uses a notation which is not a super set of **JSON**, it needs to be converted back to the original one.
+If the application uses a notation which is not a superset of **JSON**, it needs to be converted back to the original one.
 
 [[results]]
 == Results
@@ -537,6 +552,9 @@ then:
 ----
 ====
 
+However, quite a few elements are repeated, and they should be defined for a test suite, not for individual test cases.
+If we extract such items in a separate file, `core/base.json`, the test case will look like as follows:
+
 [source,yaml]
 ----
 #file: noinspection YAMLIncompatibleTypes
@@ -563,6 +581,8 @@ then:
     absent:
       - REGEX:.+
 ----
+
+Following is the `core/base.json` files that should be shared across test cases in the same test suite.
 
 [%collapsible]
 ====
@@ -648,13 +668,14 @@ No intrusion
 [[conclusion]]
 == Conclusion
 
-(t.b.d.)
+."Ideal World" to be delivered by JSON++
+image::images/figure-3.svg[align="right"]
 
 === Limitation
 
 An application sometimes defines its own syntax on top of the notation it uses for configuration.
 We expect such a syntax to be simplified and uniformed by applying our approach.
-However, this benefit was not examined in this study.
+However, this benefit was not examined in this study with existing practical examples.
 
 Multi-key handling::
 In case a notation has a feature, which cannot be represented in **JSON**; this approach requires extra treatment.
@@ -672,6 +693,7 @@ That is, what should happen when different types of nodes are found at the same 
 [bibliography]
 == References
 
+- [[[diagrams, 0]]] https://docs.google.com/presentation/d/1lVF6P2Ypzk11JO3rv1d0s6CmRGbjNJapnJuxtJqVnYo/edit#slide=id.p[diagrams]
 - [[[jq-front, 1]]] jq-front project in github.org. https://github.com/dakusui/jq-front[jq-front]:
 2019
 - [[[Cfront, 2]]] Cfront article in Wiki[edia https://en.wikipedia.org/wiki/Cfront
