@@ -28,18 +28,13 @@ However, they share common concerns and keep addressing similar problems repetit
 
 1. We consider human-readability and conciseness are completely separate concerns.
 "Conciseness" here means the ability to describe structured information without redundancy under a given grammarfootnote:humanReadability[Verboseness of the grammar should be addressed as a part of human-readability and achieved by the design of the grammar.].
-2. Then, we will focus on the concise and propose a notation **JSON{plus}{plus}**.
-This will be a notation whose instances are strictly complying with JSON.
-3. After that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
+2. A notation we propose is called **JSON{plus}{plus}**, which is strictly complying with **JSON**.
+It has a few keywords that allows users to use inheritances, compute a node's value from other nodes with a formula, and reuse a formula to compute  a node's value.
+3. Based on that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
 The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files and resolve inheritances and interpolations defined in them.
 
-**Evaluation and Results:** In the <<results>> section, we will show case-study results, where the method is applied to a few real-world examples, such as **TOML** used in `pyproject.toml`, tests written in **Gherkin** and **YAML**,
-
-This approach allows us to keep using the already existing tool supports,
-such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
-For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
-Because it will be a user side concern.
-Only in case they want to uniform how such configurations should be written, or they want to reduce user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
+**Evaluation and Results:** We will then show case-study results, where the method is applied to a few real-world examples, such as **TOML** used in `pyproject.toml`, tests written in **Gherkin** and **YAML**.
+Lastly, it will be discussed what benefits will be delivered to users of an application that takes the proposed approach and the developers of the application.
 
 The rest of this paper is organized as follows:
 In <<background>>, we will discuss how the problem of repetitiveness in configuration files and other sorts of files has been addressed, or not addressed.
@@ -79,6 +74,7 @@ For instance, multiple inheritance is necessary to reduce redundancy in configur
 However, is it implemented using depth first search or width first search?
 This can create a discrepancy in users/operators mind about a product's expected behaviors.
 
+.Features of Various Data Notations
 |===
 | Feature| YAML| TOML| HOCON| HCL| Gherkin| XML
 
@@ -95,25 +91,57 @@ This can create a discrepancy in users/operators mind about a product's expected
 | ❌ (no direct support)
 | ✔️ (using fallbacks/merging)
 | ❌ (no direct support.
-It can be simulated by combining modules) | ❌ (no direct support) | ❌ (no direct support)
+It can be simulated by combining modules)
+| ❌ (no direct support)
+| ❌ (no direct support)
 
-| **Nested Inheritance**       | ✔️ (with layered anchors)   | ❌ (no direct support)      | ✔️ (layered object merging) | ⚠️ (limited support via module chaining) | ❌ (no direct support) | ⚠️ (using nested elements, limited)
+| **Nested Inheritance**
+| ✔️ (with layered anchors)
+| ❌ (no direct support)
+| ✔️ (layered object merging)
+| ⚠️ (limited support via module chaining)
+| ❌ (no direct support)
+| ⚠️ (using nested elements, limited)
 
-| **Node References**          | ✔️ (anchors/aliases for references) | ❌ (no direct support)      | ✔️ (substitution with `${}` syntax) | ✔️ (expressions and variable references) | ❌ (no direct support) | ⚠️ (using XPointer or XPath, limited)
+| **Node References**
+| ✔️ (anchors/aliases for references)
+| ❌ (no direct support)
+| ✔️ (substitution with `${}` syntax)
+| ✔️ (expressions and variable references)
+| ❌ (no direct support)
+| ⚠️ (using XPointer or XPath, limited)
 
-| **Limitations of Multiple Inheritance** | Limited by merge key order; complex configurations can become difficult to read | Not supported natively; manual repetition required | Supported but can be complex in deeply nested structures | Not directly supported; combining modules is complex | Not supported; only supports simple statements | Not supported; merging different schemas requires external processing
+| **Limitations of Multiple Inheritance**
+| Limited by merge key order; complex configurations can become difficult to read
+| Not supported natively; manual repetition required
+| Supported but can be complex in deeply nested structures
+| Not directly supported; combining modules is complex
+| Not supported; only supports simple statements
+| Not supported; merging different schemas requires external processing
 
-| **Relationship with JSON**   | ✔️ (YAML is a superset)     | ❌ (not a superset)         | ✔️ (HOCON is a superset)    | ❌ (not a superset)           | ❌ (not a superset)        | ❌ (not a superset, but can be converted)
+| **Relationship with JSON**
+| ✔️ (YAML is a superset)
+| ❌ (not a superset)
+| ✔️ (HOCON is a superset)
+| ❌ (not a superset)
+| ❌ (not a superset)
+| ❌ (not a superset, but can be converted)
 
-| **Tool to Convert to JSON**  | PyYAML, js-yaml (JavaScript) | TomlKit, toml (Python)     | Lightbend Config (Scala/Java), pyhocon (Python) | hcl2json (Go)                | Cucumber (with JSON formatter) | xmltodict (Python), xml2js (JavaScript)
+| **Tool to Convert to JSON**
+| PyYAML, js-yaml (JavaScript)
+| TomlKit, toml (Python)
+| Lightbend Config (Scala/Java), pyhocon (Python)
+| hcl2json (Go)
+| Cucumber (with JSON formatter)
+| xmltodict (Python), xml2js (JavaScript)
 |===
 
 From this matrix, you may think that **HOCON** provides all the necessary functionalities.
 However, it still has the following challenges in practice.
 
 * **HOCON** is a much less popular notation than **YAML**.
+* Learning **HOCON** is an extra cost for users of an application whose notation isn't based on it.
 * It doesn't allow to define a function so that a formula to compute a node value can be reused.
-* It is
 
 Thus, we can state that there is no good solution to this problem.
 
@@ -668,8 +696,13 @@ No intrusion
 [[conclusion]]
 == Conclusion
 
+For application developers, it is also beneficial because burdens to implement syntax sugars for their configuration notations will be removed because it will be a user side concern.
+Only in case they want to uniform how such configurations should be written, or they want to reduce the user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
+This approach allows us to keep using the already existing tool supports,
+such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
+
 ."Ideal World" to be delivered by JSON++
-image::images/figure-3.svg[align="right"]
+image::images/figure-3.svg[align="center"]
 
 === Limitation
 
