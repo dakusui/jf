@@ -451,7 +451,40 @@ In case cyclic reference is found during this process, it will be reported and t
 
 ==== User defined functions
 
-t.b.d.
+You can define your own function for the templating stage by following syntax.
+First, you can create a file that contains definitions of your functions.
+
+[source,bash]
+.SS.sh
+----
+function hello_world() {
+  echo "Hello, world. My Function!"
+}
+----
+
+Next you reference the file inside the `$extends` syntax.
+
+[source,json]
+----
+{
+  "$extends": [
+    "SS.sh;SOURCE"
+  ],
+  "key": "eval:string:hello_world=$(hello_world),$(echo HELLO)"
+}
+----
+
+The string `SOURCE` is the keyword that tells `jq-front` to import the file.
+And as you see, you are now able to call the function you defined, `hello_world`.
+
+[source,json]
+----
+{
+  "key": "hello_world=Hello, world. My Function!,HELLO"
+}
+----
+
+The file will be rendered as you see above.
 
 === Pipelined Approach
 
