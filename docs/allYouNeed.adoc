@@ -18,7 +18,7 @@ Finally, it will be shown that such DRY features can be expressed by **JSON{plus
 This is a situation found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions.
 There are tools to manage instances under **docker**<<docker>>, **Kubernetes**<<k8s>>.
 Most of them use **YAML**<<kustomize>><<helm>><<docker-compose>>, but **Terraform**<<terraform>> uses its own notation; **HCL**.
-Not only that, in testing, **runn** uses YAML<<yaml>>, while **Cucumber**<<cucumber>> uses **Gherkin**<<gherkin>>.
+Not only that, in testing, **runn**<<runn>> uses **YAML**<<yaml>>, while **Cucumber**<<cucumber>> uses **Gherkin**<<gherkin>>.
 Another notation is **TOML**, which is used for building python projects<<pyproject>>, configuring blog system<<hugo>>, etc.
 
 In short, currently, various applications use various notations to define their own DSLs for configurations and tests.
@@ -33,8 +33,13 @@ It has a few keywords that allows users to use inheritances, compute a node's va
 3. Based on that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
 The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files and resolve inheritances and interpolations defined in them.
 
-**Evaluation and Results:** We will then show case-study results, where the method is applied to a few real-world examples, such as **TOML** used in `pyproject.toml`, tests written in **Gherkin** and **YAML**.
-Lastly, it will be discussed what benefits will be delivered to users of an application that takes the proposed approach and the developers of the application.
+**Evaluation and Results:** In the <<results>> section, we will show case-study results, where the method is applied to a few real-world examples, such as **TOML**<<toml>> used in `pyproject.toml`, tests written in **Gherkin** and **YAML**,
+
+This approach allows us to keep using the already existing tool supports,
+such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
+For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
+Because it will be a user side concern.
+Only in case they want to uniform how such configurations should be written, or they want to reduce user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
 
 The rest of this paper is organized as follows:
 In <<background>>, we will discuss how the problem of repetitiveness in configuration files and other sorts of files has been addressed, or not addressed.
@@ -49,7 +54,7 @@ In software industry, although it is considered important practice to follow the
 For example, to configure a distributed system, to define test cases, or to define characters and stages for a game, we need to describe similar yet slightly different files over and over again.
 
 For applications developed in those areas, various notations have been developed and used.
-Such as **YAML**, **TOML**, **HOCON**, **HCL**, **Gherkin**, etc.
+Such as **YAML**, **TOML**, **HOCON**<<hocon>>, **HCL**, **Gherkin**, etc.
 
 In order to mitigate the redundant descriptions, some of them have features to define information using concepts of inheritances and references.
 Not only that, some software products avoid this situation by introducing their own syntax sugars to their configuration file specifications.
@@ -428,6 +433,26 @@ Value-side processing:: This step performs the string value interpolation the sa
 }
 ----
 
+==== Built-in functions
+
+In addition to commands and functions visible to a bash shell on which `jq-front` runs, you can use functions listed in this section.
+
+`ref` function:: A function that returns a value of a node specified by an argument.
+This function can only work from inside "Work(2)" file.
+In case this function references a text node that starts with `eval:`, it performs templating on the node.
+This means, the `ref` function may be applied recursively.
+In case cyclic reference is found during this process, it will be reported and the process will be aborted.
+
+`curn` function:: A function that returns a path to the node that makes a call to this function.
+
+`parent` function:: A function that prints a path to a parent node of a given path.
+
+`error` function:: A function that prints a given error message and returns with a non-zero value.
+
+==== User defined functions
+
+t.b.d.
+
 === Pipelined Approach
 
 Conventional approaches in <<background>> section do not identify concerns such as readability for humans and that for machines as independent ones.
@@ -727,23 +752,359 @@ That is, what should happen when different types of nodes are found at the same 
 == References
 
 - [[[diagrams, 0]]] https://docs.google.com/presentation/d/1lVF6P2Ypzk11JO3rv1d0s6CmRGbjNJapnJuxtJqVnYo/edit#slide=id.p[diagrams]
-- [[[jq-front, 1]]] jq-front project in github.org. https://github.com/dakusui/jq-front[jq-front]:
+- [[[docker, 1]]] docker t.b.d.
+- [[[k8s, 2]]] Kubernetes t.b.d.
+- [[[helm, 3]]] Helm t.b.d.
+- [[[kustomize, 4]]] Kustomize t.b.d.
+- [[[docker-compose, 5]]] docker-compose t.b.d.
+- [[[terraform, 6]]] Terraform t.b.d.
+- [[[runn, 7]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml[runn]
+- [[[yaml, 8]]] https://yaml.org/[YAML]
+- [[[cucumber, 9]]] https://cucumber.io/docs/[cucumber]
+- [[[gherkin, 10]]] https://cucumber.io/docs/gherkin/[gherkin]
+- [[[pyproject, 11]]] t.b.d.
+- [[[hugo, 12]]] t.b.d.
+- [[[dry, 13]]] Hunt, Andrew, Thomas, David (1999).
+- [[[toml, 14]]] t.b.d.
+- [[[jq-front, 15]]] jq-front project in github.org. https://github.com/dakusui/jq-front[jq-front]:
 2019
-- [[[Cfront, 2]]] Cfront article in Wiki[edia https://en.wikipedia.org/wiki/Cfront
-- [[[dry, 3]]] Hunt, Andrew, Thomas, David (1999).
+- [[[Cfront, 16]]] Cfront article in Wiki[edia https://en.wikipedia.org/wiki/Cfront
 The Pragmatic Programmer : From Journeyman to Master (the first edition).
 US: Addison-Wesley. pp. 320. ISBN 978–0201616224
-- [[[hocon, 4]]] HOCON (Human-Optimized Config Object Notation), https://github.com/lightbend/config[HOCON], 2020
-- [[[docker, 5]]] docker t.b.d.
-- [[[docker-compose, 6]]] docker-compose t.b.d.
-- [[[k8s, 7]]] Kubernetes t.b.d.
-- [[[yaml, 8]]] https://yaml.org/[YAML]
-- [[[terraform, 9]]] Terraform t.b.d.
-- [[[helm, 10]]] Helm t.b.d.
-- [[[kustomize, 11]]] Kustomize t.b.d.
-- [[[runn, 12]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml[runn]
-- [[[cucumber, 13]]] https://cucumber.io/docs/[cucumber]
-- [[[gherkin, 14]]] https://cucumber.io/docs/gherkin/[gherkin]
-- [[[toml, 15]]] t.b.d.
-- [[[pyproject, 16]]] t.b.d.
-- [[[hugo, 17]]] t.b.d.
+- [[[hocon, 17]]] HOCON (Human-Optimized Config Object Notation), https://github.com/lightbend/config[HOCON], 2020
+
+[[appendix]]
+== Appendix
+
+[[built-in]]
+=== Built-in Functions
+
+In addition to commands and functions visible to a bash shell on which `jq-front` runs, you can use functions listed in this section.
+
+==== `ref` function
+
+A function that returns a value of a node specified by an argument.
+This function can only work from inside "Work(2)" file.
+
+In case this function references a text node that starts with `eval:`, it performs templating on the node.
+This means, the `ref` function may be applied recursively.
+In case cyclic reference is found during this process, it will be reported and the process will be aborted.
+
+- parameter:
+* `_path`: path to a node in the file "Work(2)"
+- returned value (stdout):
+* A value of a node specified by `_path`
+
+===== Examples
+
+[cols="1a,1a"]
+|===
+|Input |Output
+
+|[source,json]
+.A.json
+----
+{
+  "a": {
+    "b": {
+       "c": "hello"
+    }
+  },
+  "r": "eval:string:$(ref .a.b.c), world"
+}
+----
+|[source,json]
+----
+{
+  "a": {
+    "b": {
+       "c": "hello"
+    }
+  },
+  "r": "hello, world"
+}
+----
+
+|
+[source,json]
+.B.JSON
+----
+{
+  "$extends": ["A.json"],
+  "r": "eval:string:$(ref .a.b.c), world"
+}
+----
+|[source,json]
+----
+{
+  "a": {
+    "b": {
+       "c": "hello"
+    }
+  },
+  "r": "hello, world"
+}
+----
+
+|
+[source,json]
+.C.JSON
+----
+{
+  "$extends": ["A.json"],
+  "r": "eval:object:$(ref .a.b)"
+}
+----
+|[source,json]
+----
+{
+  "a": {
+    "b": {
+       "c": "hello"
+    }
+  },
+  "r": {
+    "c": "hello"
+  }
+}
+----
+
+|===
+
+==== `self` function
+
+A function that prints the entire file content before templating.
+This function is intended for internal use.
+
+- parameter: (none)
+- returned value (stdout):
+* Content of the processed file before any templating happens.
+
+==== `curn` function
+
+A function that returns a path to the node that makes a call to this function.
+
+- parameter: (none)
+- returned value (stdout):
+* A path to the string node that makes the call to this function.
+
+===== Examples
+
+[cols="1a,1a"]
+|===
+|Input |Output
+
+|
+[source,json]
+.A.json
+----
+{
+  "a": {
+    "b": [
+       "eval:$(curn)"
+    ]
+  }
+}
+----
+|[source,json]
+----
+{
+  "a": {
+    "b": [
+       ".a.b[0]"
+    ]
+  }
+}
+----
+
+|
+[source,json]
+.A.json
+----
+{
+  "a": {
+    "b": {
+       "c": "eval:$(cur)"
+    }
+  }
+}
+----
+|[source,json]
+----
+{
+  "a": {
+    "b": {
+       "c": ".a.b.c"
+    }
+  }
+}
+----
+|===
+
+NOTE: The actual outputs of this function are escaped.
+
+==== `cur` function
+
+A function that returns a path to a container node to which the current "entry" belongs.
+An "entry" means a string element in an array or a pair of key and value in an object.
+
+- parameter: (none)
+- returned value (stdout):
+* A path to the container the node belongs to
+
+===== Examples
+
+[cols="1a,1a"]
+|===
+|Input |Output
+
+|
+[source,json]
+.A.json
+----
+{
+  "a": {
+    "b": [
+       "eval:$(cur)"
+    ]
+  }
+}
+----
+|[source,json]
+----
+{
+  "a": {
+    "b": [
+       ".a.b"
+    ]
+  }
+}
+----
+
+|
+[source,json]
+.A.json
+----
+{
+  "a": {
+    "b": {
+       "c": "eval:$(cur)"
+    }
+  }
+}
+----
+|[source,json]
+----
+{
+  "a": {
+    "b": {
+       "c": ".a.b"
+    }
+  }
+}
+----
+
+|
+[source,json]
+.X.JSON
+----
+{
+  "x": {
+    "$extends": ["A.json"]
+  }
+}
+----
+|[source,json]
+----
+{
+  "x": {
+    "a": {
+      "b": {
+         "c": ".x.a.b"
+      }
+    }
+  }
+}
+----
+
+|===
+
+NOTE: Notice that jq-front first expands all the inheritances in the input and then invokes the 'templating' mechanism.
+Thus, `cur` function calls in inherited files are evaluated based on paths where they appear in the expanded file.
+
+==== `parent` function
+
+A function that prints a path to a parent node of a given path.
+
+- parameter:
+* A path to a node
+- returned value (stdout):
+* A path to a parent of the node.
+
+===== Examples
+
+[cols="1a,1a"]
+|===
+|Input |Output
+
+|
+[source,json]
+----
+"eval:$(parent .hello.world)"
+----
+
+|[source,json]
+----
+".hello"
+----
+
+|===
+
+==== `error` function
+
+A function that prints a given error message and returns a non-zero value.
+
+- parameter:
+* An error message
+- returned value:
+** stdout
+*** (none)
+** sterr
+*** A string starts with ```ERROR: {given error message}```.
+A stack trace follows it.
+** exit code
+*** A non-zero value.
+
+NOTE: If you nest a call to a function or command that fails by another using a command substitution of `bash`, the next call will not be aborted immediately, in general.
+That is, ```"eval:$(echo $(cat missing-file))-$(echo hello)"``` will result in `-hello`.
+This is a behaviour of `bash` and its command substitution.
+However, if you use this function, ```"eval:$(echo $(cat missing-file || error 'something went wrong'))-$(echo hello)"```, `jq-front` will abort the process after evaluating this string because it finds a keyword ```ERROR: ``` in the stderr.
+
+NOTE: Functions discussed in this section check whether `$?` is zero at the beginning.
+If it is not zero, the function will abort and the string evaluation will be aborted in general.
+However, a user is still able to nest the call with another function that not necessarily performs such a check.
+In this case, the evaluation will not stop at the point and `jq-front` will abort the rest of its execution after handling the string since it will find the ```ERROR: ``` keyword.
+
+===== Examples
+
+[cols="1a,1a"]
+|===
+|Input |Output
+
+|
+[source,json]
+----
+"eval:$(error hello)"
+----
+
+|[source,console]
+----
+ERROR: hello
+  at 36 abort /home/who/Documents/jq-front/lib/shared.sh
+  at 439 _check_cyclic_dependency /home/who/Documents/jq-front/jq-front
+  at 111 _expand_nodelevel_inheritances /home/who/Documents/jq-front/jq-front
+...
+----
+
+|===
+
