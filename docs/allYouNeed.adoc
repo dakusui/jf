@@ -148,7 +148,7 @@ However, it still has the following challenges in practice.
 * Learning **HOCON** is an extra cost for users of an application whose notation isn't based on it.
 * It doesn't allow to define a function so that a formula to compute a node value can be reused.
 
-Thus, we can state that there is no good solution to this problem.
+Thus, we state that there is no good solution to the problems.
 
 [[technique]]
 == Technique
@@ -785,20 +785,20 @@ That is, what should happen when different types of nodes are found at the same 
 == References
 
 - [[[diagrams, 0]]] https://docs.google.com/presentation/d/1lVF6P2Ypzk11JO3rv1d0s6CmRGbjNJapnJuxtJqVnYo/edit#slide=id.p[diagrams]
-- [[[docker, 1]]] docker t.b.d.
-- [[[k8s, 2]]] Kubernetes t.b.d.
-- [[[helm, 3]]] Helm t.b.d.
-- [[[kustomize, 4]]] Kustomize t.b.d.
-- [[[docker-compose, 5]]] docker-compose t.b.d.
-- [[[terraform, 6]]] Terraform t.b.d.
-- [[[runn, 7]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml[runn]
-- [[[yaml, 8]]] https://yaml.org/[YAML]
-- [[[cucumber, 9]]] https://cucumber.io/docs/[cucumber]
-- [[[gherkin, 10]]] https://cucumber.io/docs/gherkin/[gherkin]
-- [[[pyproject, 11]]] t.b.d.
-- [[[hugo, 12]]] t.b.d.
+- [[[docker, 1]]] https://www.docker.com/[Develop faster. Run anywhere.], Seen Nov/20/2024.
+- [[[k8s, 2]]] https://kubernetes.io/[Kubernetes: Production-Grade Container Orchestration], Seen Nov/20/2024.
+- [[[helm, 3]]] https://helm.sh/[HELM: The package package manager for Kubernetes], Seen Nov/20/2024.
+- [[[kustomize, 4]]] https://kustomize.io/[Kubernetes native configuration management], Seen Nov/20/2024
+- [[[docker-compose, 5]]] https://docs.docker.com/compose/[Docker Compose], Seen Nov/20/2024.
+- [[[terraform, 6]]] https://www.terraform.io/[Automate infrastructure on any cloud with Terraform], Seen Nov/20/2024
+- [[[runn, 7]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml[runn], Seen Nov/20/2024.
+- [[[yaml, 8]]] https://yaml.org/[YAML], Seen Nov/20/2024.
+- [[[cucumber, 9]]] https://cucumber.io/docs/[cucumber], Seen Nov/20/2024.
+- [[[gherkin, 10]]] https://cucumber.io/docs/gherkin/[gherkin], Seen Nov/20/2024.
+- [[[pyproject, 11]]] https://packaging.python.org/en/latest/guides/writing-pyproject-toml/[Writing your `pyproject.toml`], Seen Nov/20/2024.
+- [[[hugo, 12]]] https://gohugo.io/[HUGO: The world's fastest framework for building websites], Seen Nov/20/2024
 - [[[dry, 13]]] Hunt, Andrew, Thomas, David (1999).
-- [[[toml, 14]]] t.b.d.
+- [[[toml, 14]]] https://toml.io/en/[TOML: Tom's Obvious Minimal Language], Seen Nov/20/2024.
 - [[[jq-front, 15]]] jq-front project in github.org. https://github.com/dakusui/jq-front[jq-front]:
 2019
 - [[[Cfront, 16]]] Cfront article in Wiki[edia https://en.wikipedia.org/wiki/Cfront
