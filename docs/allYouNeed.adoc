@@ -488,8 +488,8 @@ The file will be rendered as you see above.
 
 === Pipelined Approach
 
-Conventional approaches in <<background>> section do not identify concerns such as readability for humans and that for machines as independent ones.
-Instead, they process configuration files in a monolithic single step Fig. <<monolithic>>.
+Conventional approaches in <<background>> section do not identify readability for humans and that for machines as independent concerns.
+They process configuration files in a monolithic single step Fig. <<monolithic>>.
 
 [[monolithic, 1]]
 [mermaid]
@@ -749,18 +749,31 @@ Following is the `core/base.json` files that should be shared across test cases 
 ====
 
 NOTE:: This approach doesn't require IDE support for JSON++ as it is just a subset of JSON.
-No intrusion
 
 [[conclusion]]
 == Conclusion
+
+In the software industry, various notations (**YAML**, **TOML**, **HOCON**, **HCL**, ...) have been developed and used in order to describe structured user information with complex constraints.
+These notations have their own philosophies about "readability".
+Some of them have features to reduce redundancies by reusing node values within a file.
+Such features are sometimes implemented as a feature of an application that uses one of those notations (syntax sugar).
+In other words, similar features are implemented by different notation parsers and applications repeatedly.
+We proposed a new approach, where
+
+1. A readability for humans and a readability for machines are clearly separated.
+2. A readability for humans are left to individual notations.
+This layer is called "human-aware notation"
+3. Introduce "human-aware notation" agnostic syntax to model inheritances and node-value computation inside **JSON** level.
+This enhanced **JSON** syntax is called **JSON{plus}{plus}**.
+4. Pipeline stages, one of which converts data from "human-aware notation" to **JSON**, another processes **JSON{plus}{plus}** to plain-**JSON**, and then the processed **JSON** converted back to the original format to be passed to the original tool.
+
+This approach delivered benefits to application users, where experiences across applications are uniformed and efforts to learn new application's syntax are reduced.
 
 For application developers, it is also beneficial because burdens to implement syntax sugars for their configuration notations will be removed because it will be a user side concern.
 Only in case they want to uniform how such configurations should be written, or they want to reduce the user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
 This approach allows us to keep using the already existing tool supports,
 such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
 
-."Ideal World" to be delivered by JSON++
-image::images/figure-3.svg[align="center"]
 
 === Limitation
 
@@ -780,6 +793,9 @@ Sandboxing.
 
 Refining finer details such as semantics on multiple inheritances.
 That is, what should happen when different types of nodes are found at the same JSON path location.
+
+."Ideal World" to be delivered by JSON++
+image::images/figure-3.svg[align="center"]
 
 [bibliography]
 == References
