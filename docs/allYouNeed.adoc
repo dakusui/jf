@@ -770,10 +770,8 @@ This enhanced **JSON** syntax is called **JSON{plus}{plus}**.
 This approach delivered benefits to application users, where experiences across applications are uniformed and efforts to learn new application's syntax are reduced.
 
 For application developers, it is also beneficial because burdens to implement syntax sugars for their configuration notations will be removed because it will be a user side concern.
-Only in case they want to uniform how such configurations should be written, or they want to reduce the user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
 This approach allows us to keep using the already existing tool supports,
 such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
-
 
 === Limitation
 
