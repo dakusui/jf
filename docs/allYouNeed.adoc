@@ -1,3 +1,4 @@
+// suppress inspection "StructuralWrap"
 // suppress inspection "GrazieInspection" for whole file
 :toc:
 
@@ -5,7 +6,9 @@
 
 **Abstract:** In various areas of software development, to describe information with complex structures and constraints, a number of similar but different notations have been proposed and used.
 This is especially frequent in configurations of distributed systems.
-In this article, we strictly identify a notation's human-readability and functionality are different ones.
+These notations and software products have different syntaxes and no compatibility.
+Because of that, learning and development costs have been more expensive than it can be.
+In this article, we strictly identify a notation's human-readability and functionality are separate ones.
 Then, we introduce a notation which focuses on the latter, called **JSON{plus}{plus}**.
 Based on it, we demonstrate a pipeline-based approach is possible, where data defined in human-readability focused notations such as **YAML** and **HCL** are transformed into **JSON{plus}{plus}**.
 Finally, it will be shown that such DRY features can be expressed by **JSON{plus}{plus}** syntax in a uniformed way, which reduces learning cost for users and allows for developers to focus on human-readability of the notations.
@@ -16,22 +19,29 @@ Finally, it will be shown that such DRY features can be expressed by **JSON{plus
 **Status Quo:** Not a few similar yet different notations have been proposed and applied to various software products to describe information with complex structures and constraints.
 
 This is a situation found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions.
-There are tools to manage instances under **docker**<<docker>>, **Kubernetes**<<k8s>>.
+There are such tools to manage instances under **docker**<<docker>> and **Kubernetes**<<k8s>>.
 Most of them use **YAML**<<kustomize>><<helm>><<docker-compose>>, but **Terraform**<<terraform>> uses its own notation; **HCL**.
-Not only that, in testing, **runn**<<runn>> uses **YAML**<<yaml>>, while **Cucumber**<<cucumber>> uses **Gherkin**<<gherkin>>.
-Another notation is **TOML**, which is used for building python projects<<pyproject>>, configuring blog system<<hugo>>, etc.
+Not only that, in testing field, **runn**<<runn>> and **commandunit**<<commandunit>> use **YAML**<<yaml>>, while **Cucumber**<<cucumber>> uses **Gherkin**<<gherkin>>.
+Another notation is **TOML**, which is used for building python projects<<pyproject>>, widely used for python projects, but not limited to.
+For instance, configuring blog system<<hugo>>.
 
 In short, currently, various applications use various notations to define their own DSLs for configurations and tests.
 However, they share common concerns and keep addressing similar problems repetitively, which is inefficient, error-prone, and raising learning costs for users.
 
-**Proposed Method:** In this article, we will propose a method, where:
+**Proposed Method:**  We propose a new method, which is designed based on following principles:
 
 1. We consider human-readability and conciseness are completely separate concerns.
 "Conciseness" here means the ability to describe structured information without redundancy under a given grammarfootnote:humanReadability[Verboseness of the grammar should be addressed as a part of human-readability and achieved by the design of the grammar.].
 2. A notation we propose is called **JSON{plus}{plus}**, which is strictly complying with **JSON**.
 It has a few keywords that allows users to use inheritances, compute a node's value from other nodes with a formula, and reuse a formula to compute  a node's value.
-3. Based on that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
+3. We also present a reference implementation of a processor for **JSON{plus}{plus}**, called **jq-front**<<jq-front>>.
+4. Based on that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
 The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files and resolve inheritances and interpolations defined in them.
+
+This is a situation, where the industry is against at a principle in the UNIX philosophy: "Make each program do one thing well".
+
+In this article, we provide a working example of toolchains, where notations are focusing on human-readability, applications are focusing on its functionalities, and "machine-readability" is taken care of by an independent component.
+With this, we aim at deliver a way to achieve "Build programs to work together", another important UNIX philosophy.
 
 **Evaluation and Results:** In the <<results>> section, we will show case-study results, where the method is applied to a few real-world examples, such as **TOML**<<toml>> used in `pyproject.toml`, tests written in **Gherkin** and **YAML**,
 
@@ -48,7 +58,7 @@ Then in <<results>>, we look into how much the approach can reduce the size of c
 In the <<conclusion>>, we will summarize our findings and future works.
 
 [[background]]
-== Background
+== Background and Related Work
 
 In software industry, although it is considered important practice to follow the "D-R-Y" (Don't repeat yourself) principle<<dry>>, configuration files and other data files sometimes become repetitive and hard to maintain.
 For example, to configure a distributed system, to define test cases, or to define characters and stages for a game, we need to describe similar yet slightly different files over and over again.
@@ -160,7 +170,7 @@ To address these challenges, we have created a tool called **jq-front**<<jq-fron
 === Separation of Concerns
 
 In our approach, we identify the human readability and the capability to make the descriptions "D-R-Y"ed are completely independent concerns.
-Being able to reduce repetitions might improve the human-readability as a result as a result, still it is different from the readability improvement delivered by YAML,TOML, HCL, and other sorts of super-JSON notations.
+Being able to reduce repetitions might improve the human-readability as a result, still it is different from the readability improvement delivered by **YAML**, **TOML**, **HCL**, and others.
 Those notations allow users not to quote strings, where obvious from the context.
 
 === New Notation: JSON{plus}{plus}
@@ -170,8 +180,7 @@ Through examining various notations, authors realized that the functionalities d
 * Inheritances
 * Interpolations
 
-Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, are designed to be "superset" of **JSON**.
-Also, tools to convert them into **JSON** are available.
+Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, and others are designed to be "superset" of **JSON** or tools to convert them into **JSON** are available.
 
 *JSON{plus}{plus}* is a notation to implement the features but within the syntax of **JSON** by introducing a few keywords that have special semantics.
 
@@ -750,6 +759,31 @@ Following is the `core/base.json` files that should be shared across test cases 
 
 NOTE:: This approach doesn't require IDE support for JSON++ as it is just a subset of JSON.
 
+[[discussion]]
+== Discussion
+
+=== Interpretation of Results
+
+(t.b.d.)
+
+=== Implications
+
+(t.b.d.)
+
+=== Limitations
+
+Features beyond JSON::
+In case a notation has a feature, which cannot be represented in **JSON**, this approach requires extra treatment.
+For example, **YAML** allows to define entries with the same key multiple times, which is not valid in **JSON**.
+In such cases, we will need to introduce a convention that interprets it into **JSON**, and converts it back to **YAML**, safely.
+
+Application-level Syntax-sugars::
+An application sometimes defines its own syntax on top of its data notation for user's convenience.
+We expect such a syntax to be simplified and uniformed by applying our approach.
+However, this benefit was not examined in this study.
+
+
+
 [[conclusion]]
 == Conclusion
 
@@ -773,27 +807,32 @@ For application developers, it is also beneficial because burdens to implement s
 This approach allows us to keep using the already existing tool supports,
 such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
 
-=== Limitation
-
-An application sometimes defines its own syntax on top of the notation it uses for configuration.
-We expect such a syntax to be simplified and uniformed by applying our approach.
-However, this benefit was not examined in this study with existing practical examples.
-
-Multi-key handling::
-In case a notation has a feature, which cannot be represented in **JSON**; this approach requires extra treatment.
-For example, **YAML** allows to define entries with the same key multiple times, which is not valid in **JSON**.
-In such cases, we will need to introduce a convention that interprets it into **JSON**, and converts it back to **YAML**, safely.
 
 === Future Works
 
-Implementation in faster and more reliable languages such as **Java**, **Golang**, **Rust**, or whatever else is desired.
-Sandboxing.
+Fig. <<technique>> section, we discussed "Pipelined approach".
+If we further apply this approach to a broader scope, we can think of an ecosystem,
+where applications concentrate on their business logics,
+while notations concentrate on their human-readability in their contexts.
+
+."Ideal World" to be delivered by JSON++
+image::images/figure-3.svg[align="center"]
+
+That is, as **HCL** is a notation for describing configurations of distributed systems,
+it should focus on human-readability for such system's deployments.
+Features such as referencing values of other nodes, defining a new node from existing other nodes, and maintaining consistency among values of nodes, should be left to **JSON**-level processor, such as **jq-front**.
+
+To achieve such an eco-system, authors think following features will keys:
+
+Faster Implementation of the Processor::
+Right now, **jq-front** is implemented as a **bash** script.
+While this resulted in a simple design, the performance overhead is not negligible.
+Implementation in faster languages such as **Java**, **Golang**, **Rust**, or whatever else is desired.
 
 Refining finer details such as semantics on multiple inheritances.
 That is, what should happen when different types of nodes are found at the same JSON path location.
 
-."Ideal World" to be delivered by JSON++
-image::images/figure-3.svg[align="center"]
+
 
 [bibliography]
 == References
@@ -806,19 +845,20 @@ image::images/figure-3.svg[align="center"]
 - [[[docker-compose, 5]]] https://docs.docker.com/compose/[Docker Compose], Seen Nov/20/2024.
 - [[[terraform, 6]]] https://www.terraform.io/[Automate infrastructure on any cloud with Terraform], Seen Nov/20/2024
 - [[[runn, 7]]] https://github.com/k1LoW/runn/blob/main/examples/cdp.yml[runn], Seen Nov/20/2024.
-- [[[yaml, 8]]] https://yaml.org/[YAML], Seen Nov/20/2024.
-- [[[cucumber, 9]]] https://cucumber.io/docs/[cucumber], Seen Nov/20/2024.
-- [[[gherkin, 10]]] https://cucumber.io/docs/gherkin/[gherkin], Seen Nov/20/2024.
-- [[[pyproject, 11]]] https://packaging.python.org/en/latest/guides/writing-pyproject-toml/[Writing your `pyproject.toml`], Seen Nov/20/2024.
-- [[[hugo, 12]]] https://gohugo.io/[HUGO: The world's fastest framework for building websites], Seen Nov/20/2024
-- [[[dry, 13]]] Hunt, Andrew, Thomas, David (1999).
-- [[[toml, 14]]] https://toml.io/en/[TOML: Tom's Obvious Minimal Language], Seen Nov/20/2024.
-- [[[jq-front, 15]]] jq-front project in github.org. https://github.com/dakusui/jq-front[jq-front]:
+- [[[commandunit, 8]]] https://github.com/dakusui/commandunit[commandunit], Seen Nov/20/2024.
+- [[[yaml, 9]]] https://yaml.org/[YAML], Seen Nov/20/2024.
+- [[[cucumber, 10]]] https://cucumber.io/docs/[cucumber], Seen Nov/20/2024.
+- [[[gherkin, 11]]] https://cucumber.io/docs/gherkin/[gherkin], Seen Nov/20/2024.
+- [[[pyproject, 12]]] https://packaging.python.org/en/latest/guides/writing-pyproject-toml/[Writing your `pyproject.toml`], Seen Nov/20/2024.
+- [[[hugo, 13]]] https://gohugo.io/[HUGO: The world's fastest framework for building websites], Seen Nov/20/2024
+- [[[dry, 14]]] Hunt, Andrew, Thomas, David (1999).
+- [[[toml, 15]]] https://toml.io/en/[TOML: Tom's Obvious Minimal Language], Seen Nov/20/2024.
+- [[[jq-front, 16]]] jq-front project in github.org. https://github.com/dakusui/jq-front[jq-front]:
 2019
-- [[[Cfront, 16]]] Cfront article in Wiki[edia https://en.wikipedia.org/wiki/Cfront
+- [[[Cfront, 17]]] Cfront article in Wiki[edia https://en.wikipedia.org/wiki/Cfront
 The Pragmatic Programmer : From Journeyman to Master (the first edition).
 US: Addison-Wesley. pp. 320. ISBN 978–0201616224
-- [[[hocon, 17]]] HOCON (Human-Optimized Config Object Notation), https://github.com/lightbend/config[HOCON], 2020
+- [[[hocon, 18]]] HOCON (Human-Optimized Config Object Notation), https://github.com/lightbend/config[HOCON], 2020
 
 [[appendix]]
 == Appendix
