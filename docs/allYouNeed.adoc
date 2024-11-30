@@ -163,13 +163,15 @@ Thus, we state that there is no good solution to the problems.
 [[technique]]
 == Technique
 
-As stated in the **Background** section, the industry has tried to address similar problems over and over again.
-One uses YAML, another TOML, yet another comes up with a new notation such as HCL, HOCON, etc.
-To address these challenges, we have created a tool called **jq-front**<<jq-front>>.
+As stated in the <<background>> section, the industry has tried to address similar problems over and over again.
+One uses **YAML**, another **TOML**, yet another comes up with a new notation such as **HCL**, **HOCON**, etc.
+To address these challenges, we have created a tool called **jq-front**<<jq-front>> and a pipeline that employs it.
 
-=== Separation of Concerns
+=== Separation of Concerns: Readability for Human and Machines
 
-In our approach, we identify the human readability and the capability to make the descriptions "D-R-Y"ed are completely independent concerns.
+In our approach, we identify the human readability and the capability to make the descriptions of structured information and complex constraints "D-R-Y"ed are completely independent concerns.
+
+
 Being able to reduce repetitions might improve the human-readability as a result, still it is different from the readability improvement delivered by **YAML**, **TOML**, **HCL**, and others.
 Those notations allow users not to quote strings, where obvious from the context.
 
@@ -787,15 +789,15 @@ However, this benefit was not examined in this study.
 [[conclusion]]
 == Conclusion
 
-In the software industry, various notations (**YAML**, **TOML**, **HOCON**, **HCL**, ...) have been developed and used in order to describe structured user information with complex constraints.
+In the software industry, various notations (**YAML**, **TOML**, **HOCON**, **HCL**, ...) have been developed and used in order to describe structured information with complex constraints.
 These notations have their own philosophies about "readability".
 Some of them have features to reduce redundancies by reusing node values within a file.
-Such features are sometimes implemented as a feature of an application that uses one of those notations (syntax sugar).
-In other words, similar features are implemented by different notation parsers and applications repeatedly.
-We proposed a new approach, where
+Such features have been implemented as a feature of an application.
+However, these features are more or less similar to each others, and therefore, similar functionalities have implemented by parsers of different notations and applications repeatedly.
+To address this situation, we proposed a new approach, where in this article:
 
-1. A readability for humans and a readability for machines are clearly separated.
-2. A readability for humans are left to individual notations.
+1. Readability for humans and readability for machines are clearly separated as independent concerns.
+2. Readability for humans are left to individual notations.
 This layer is called "human-aware notation"
 3. Introduce "human-aware notation" agnostic syntax to model inheritances and node-value computation inside **JSON** level.
 This enhanced **JSON** syntax is called **JSON{plus}{plus}**.
@@ -810,7 +812,7 @@ such as syntax highlighting plugins, refactoring feature of editors, CLI tools t
 
 === Future Works
 
-Fig. <<technique>> section, we discussed "Pipelined approach".
+A fituFig. <<technique>> section, we discussed "Pipelined approach".
 If we further apply this approach to a broader scope, we can think of an ecosystem,
 where applications concentrate on their business logics,
 while notations concentrate on their human-readability in their contexts.
@@ -863,335 +865,4 @@ US: Addison-Wesley. pp. 320. ISBN 978–0201616224
 [[appendix]]
 == Appendix
 
-[[built-in]]
-=== Built-in Functions
-
-In addition to commands and functions visible to a bash shell on which `jq-front` runs, you can use functions listed in this section.
-
-==== `ref` function
-
-A function that returns a value of a node specified by an argument.
-This function can only work from inside "Work(2)" file.
-
-In case this function references a text node that starts with `eval:`, it performs templating on the node.
-This means, the `ref` function may be applied recursively.
-In case cyclic reference is found during this process, it will be reported and the process will be aborted.
-
-- parameter:
-* `_path`: path to a node in the file "Work(2)"
-- returned value (stdout):
-* A value of a node specified by `_path`
-
-===== Examples
-
-[cols="1a,1a"]
-|===
-|Input |Output
-
-|[source,json]
-.A.json
-----
-{
-  "a": {
-    "b": {
-       "c": "hello"
-    }
-  },
-  "r": "eval:string:$(ref .a.b.c), world"
-}
-----
-|[source,json]
-----
-{
-  "a": {
-    "b": {
-       "c": "hello"
-    }
-  },
-  "r": "hello, world"
-}
-----
-
-|
-[source,json]
-.B.JSON
-----
-{
-  "$extends": ["A.json"],
-  "r": "eval:string:$(ref .a.b.c), world"
-}
-----
-|[source,json]
-----
-{
-  "a": {
-    "b": {
-       "c": "hello"
-    }
-  },
-  "r": "hello, world"
-}
-----
-
-|
-[source,json]
-.C.JSON
-----
-{
-  "$extends": ["A.json"],
-  "r": "eval:object:$(ref .a.b)"
-}
-----
-|[source,json]
-----
-{
-  "a": {
-    "b": {
-       "c": "hello"
-    }
-  },
-  "r": {
-    "c": "hello"
-  }
-}
-----
-
-|===
-
-==== `self` function
-
-A function that prints the entire file content before templating.
-This function is intended for internal use.
-
-- parameter: (none)
-- returned value (stdout):
-* Content of the processed file before any templating happens.
-
-==== `curn` function
-
-A function that returns a path to the node that makes a call to this function.
-
-- parameter: (none)
-- returned value (stdout):
-* A path to the string node that makes the call to this function.
-
-===== Examples
-
-[cols="1a,1a"]
-|===
-|Input |Output
-
-|
-[source,json]
-.A.json
-----
-{
-  "a": {
-    "b": [
-       "eval:$(curn)"
-    ]
-  }
-}
-----
-|[source,json]
-----
-{
-  "a": {
-    "b": [
-       ".a.b[0]"
-    ]
-  }
-}
-----
-
-|
-[source,json]
-.A.json
-----
-{
-  "a": {
-    "b": {
-       "c": "eval:$(cur)"
-    }
-  }
-}
-----
-|[source,json]
-----
-{
-  "a": {
-    "b": {
-       "c": ".a.b.c"
-    }
-  }
-}
-----
-|===
-
-NOTE: The actual outputs of this function are escaped.
-
-==== `cur` function
-
-A function that returns a path to a container node to which the current "entry" belongs.
-An "entry" means a string element in an array or a pair of key and value in an object.
-
-- parameter: (none)
-- returned value (stdout):
-* A path to the container the node belongs to
-
-===== Examples
-
-[cols="1a,1a"]
-|===
-|Input |Output
-
-|
-[source,json]
-.A.json
-----
-{
-  "a": {
-    "b": [
-       "eval:$(cur)"
-    ]
-  }
-}
-----
-|[source,json]
-----
-{
-  "a": {
-    "b": [
-       ".a.b"
-    ]
-  }
-}
-----
-
-|
-[source,json]
-.A.json
-----
-{
-  "a": {
-    "b": {
-       "c": "eval:$(cur)"
-    }
-  }
-}
-----
-|[source,json]
-----
-{
-  "a": {
-    "b": {
-       "c": ".a.b"
-    }
-  }
-}
-----
-
-|
-[source,json]
-.X.JSON
-----
-{
-  "x": {
-    "$extends": ["A.json"]
-  }
-}
-----
-|[source,json]
-----
-{
-  "x": {
-    "a": {
-      "b": {
-         "c": ".x.a.b"
-      }
-    }
-  }
-}
-----
-
-|===
-
-NOTE: Notice that jq-front first expands all the inheritances in the input and then invokes the 'templating' mechanism.
-Thus, `cur` function calls in inherited files are evaluated based on paths where they appear in the expanded file.
-
-==== `parent` function
-
-A function that prints a path to a parent node of a given path.
-
-- parameter:
-* A path to a node
-- returned value (stdout):
-* A path to a parent of the node.
-
-===== Examples
-
-[cols="1a,1a"]
-|===
-|Input |Output
-
-|
-[source,json]
-----
-"eval:$(parent .hello.world)"
-----
-
-|[source,json]
-----
-".hello"
-----
-
-|===
-
-==== `error` function
-
-A function that prints a given error message and returns a non-zero value.
-
-- parameter:
-* An error message
-- returned value:
-** stdout
-*** (none)
-** sterr
-*** A string starts with ```ERROR: {given error message}```.
-A stack trace follows it.
-** exit code
-*** A non-zero value.
-
-NOTE: If you nest a call to a function or command that fails by another using a command substitution of `bash`, the next call will not be aborted immediately, in general.
-That is, ```"eval:$(echo $(cat missing-file))-$(echo hello)"``` will result in `-hello`.
-This is a behaviour of `bash` and its command substitution.
-However, if you use this function, ```"eval:$(echo $(cat missing-file || error 'something went wrong'))-$(echo hello)"```, `jq-front` will abort the process after evaluating this string because it finds a keyword ```ERROR: ``` in the stderr.
-
-NOTE: Functions discussed in this section check whether `$?` is zero at the beginning.
-If it is not zero, the function will abort and the string evaluation will be aborted in general.
-However, a user is still able to nest the call with another function that not necessarily performs such a check.
-In this case, the evaluation will not stop at the point and `jq-front` will abort the rest of its execution after handling the string since it will find the ```ERROR: ``` keyword.
-
-===== Examples
-
-[cols="1a,1a"]
-|===
-|Input |Output
-
-|
-[source,json]
-----
-"eval:$(error hello)"
-----
-
-|[source,console]
-----
-ERROR: hello
-  at 36 abort /home/who/Documents/jq-front/lib/shared.sh
-  at 439 _check_cyclic_dependency /home/who/Documents/jq-front/jq-front
-  at 111 _expand_nodelevel_inheritances /home/who/Documents/jq-front/jq-front
-...
-----
-
-|===
-
+include::allYouNeed-appendix-builtInFunctions.adoc[]

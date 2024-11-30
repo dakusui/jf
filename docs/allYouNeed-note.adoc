@@ -1,0 +1,18 @@
+== What is human- and machine-readability?
+
+What a human cares:
+
+- Visual structure
+- Number of lines
+- Number of tokens
+- Number of punctuations, quotes, that is... key types.
+
+
+What a machine cares
+
+- Simple parser (CFG)
+- Logic to interpret the structure
+
+- A simple "View" of a complex structure
+
+We use the term "syntax sugar" loosely in this article, which means a syntactic construct intended to ease human effort.
