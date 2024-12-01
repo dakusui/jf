@@ -1,0 +1,387 @@
+:toc:
+
+[[technique]]
+== Technique
+
+As stated in the <<background>> section, the industry has tried to address similar problems via different approaches.
+
+In order to improve human-readability, where visual structure on an editor screen, resemblance with existing formats, or number of lines and tokens matter more, various notations have been introduced, such as **YAML**, **TOML**, **HCL**, or **HOCON**.
+
+Some of these notations have features to make texts less redundant as much as possible.
+For instance, **YAML** allows a node to "inherit" another in the same file.
+**HOCON** and **HCL** have features to reference other nodes' values to define a value of a node on top of inheritances.
+Such features are sometimes implemented as a part of application programs.
+Without these features, users will need to define the same values and structures multiple times, which is error-prone and causes poor user-experiences.
+In this article, we refer to such features **syntax sugars**, which are improving "machine-readability" as it helps keep notation processors of applications simple.
+
+However, in this situation, where each notation and application has its own syntax sugars, user-experiences across applications are already damaged.
+Because the learning costs of a notation will be expensive, behaviors of similar features will be not consistent and subtly different.
+
+In this section, we will discuss a novel processing pipeline, where human-readability and machine-readability are addressed as separate concerns.
+To achieve this approach, we have created a tool called **jq-front**<<jq-front>> and a pipeline that employs it.
+
+This approach enables a single uniformed yet sufficiently powerful set of syntax sugars and various human-readable notations at the same time in a consistent manner.
+This will further deliver evolutions in human- and machine- readability of application data notations.
+
+We can think of another approach to employ templating engines such as Handlebars<<handlebars>> and Mustache<<mustache>>.
+However, it will create other challenges because it makes template files invalid in original notations.
+The benefits of limitations of the approach will be discussed in the <<discussion>> section compared with ours.
+
+=== Separation of Concerns: Readability for Human and Machines
+
+In our approach, we identify the human readability and the capability to make the descriptions of structured information and complex constraints "D-R-Y"ed are completely independent concerns.
+
+
+Being able to reduce repetitions might improve the human-readability as a result, still it is different from the readability improvement delivered by **YAML**, **TOML**, **HCL**, and others.
+Those notations allow users not to quote strings, where obvious from the context.
+
+=== New Notation: JSON{plus}{plus}
+
+Through examining various notations, authors realized that the functionalities designed and implemented over and over again at the every corner of the industry are essentially:
+
+* Inheritances
+* Interpolations
+
+Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, and others are designed to be "superset" of **JSON** or tools to convert them into **JSON** are available.
+
+*JSON{plus}{plus}* is a notation to implement the features but within the syntax of **JSON** by introducing a few keywords that have special semantics.
+
+As it is designed to bestrictly compliant with **JSON**, we do not need to re-implement tools to edit or manipulate it.
+We can just reuse such tools developed for **JSON**.
+Applications will not need to develop its own custom configuration format.
+They will just choose one of preferred formats from **YAML**, **TOML**, etc. and define built-in files to ease user's effort.
+
+=== JSON++ processor: jq-front
+
+We implemented a processor **jq-front**<<jq-front>>, that converts data written in JSON{plus}{plus} into plain JSON.
+We named this tool after a pre-processor that converts C{plus}{plus} source code into plain C source code, **Cfront**<<Cfront>>.
+
+[ditaa]
+----
+                                         +-----------------------------+
+        +----------+                     |                             |
+        |  Input{d}|<--------------------+  Inheritance Resolver Module|
+        +----------+                     |                             |
+                                         +---------------+-------------+
+                                                         |
+                                                         :
+                                                         V
+                                                    +----+----+
+                                                    |Work(2 a)|
+                                                    |{d}      |
+                                                    +----+----+
+                                                         ^
+                                                         |
+                                              +----------+---------+
+                                              |    Interpolation   |
+                                              |   Handling Module  |
+                                              +----------+---------+
+  +----+       +----+                                    |
+  |A{o}+-=---->+B{o}| (A writes to B)                    :
+  +----+       +----+                                    V
+                                                     +---+---+
+  +----+       +----+                                |Output |
+  |A{o}+------>+B{o}| (A reads from B)               |{d}    |
+  +----+       +----+                                +---+---+
+----
+
+It consists of a couple of moules, which are **Inheritance Resolution** and **Interpolation Handling**.
+As their names suggest, once a source file is given to the tool, **Inheritance Resolution** module processes it to resolve inheritances defined in the source.
+Then its output is passed to the **Interpolation Handling** module.
+Each of them has its own internal pipelines.
+In this section, we will be looking into them one by one.
+
+For the sake of the discussion, we assume we have the following files in the current working directory.
+
+[source,json]
+.source.json++
+----
+{
+  "$extends": [ "base.json++" ],
+  "$local": {
+    "A": {
+      "eval:$(echo -n Hello)": "eval:string:$(ref .test.k)"
+    }
+  },
+  "test": {
+    "$extends": [
+      "A"
+    ],
+    "k": "hello"
+  }
+}
+----
+
+[source,json]
+.base.json++
+----
+{
+  "base": "world"
+}
+----
+
+==== Inheritance Mechanism
+
+**Inheritance Resolution** is divided into three parts as in all.
+One is "file level inheritance handling", another is "local node materialization", and the third is "node level inheritance".
+Each of them is designed to serve for different responsibilities.
+
+[[inheritance]]
+[ditaa]
+.Inheritance Mechanism
+----
+              +------------------------------------------------------------------------+
+              |                                                                        |
+              | file-level                    local node materialization               |
+              | inheritance                                                            |
+              |   +----+                               +-----+                         |
+    +---------|---+ {o}+-=----------+     +------------+ {o} +-=-----------+           |
+    |         |   +----+            |     |            +-----+             | 0...n     |
+    V         |                     V     V                                V           |
+  +------+    |                    +-------+                         +------------+    |
+  |Source|    |                    |Work(1)|                         |LocalNodes  |    |
+  |{d}   |    |                    |{d}    |                         |{d}         |    |
+  +------+    |                    +-------+                         +------------+    |
+              |                        ^        node-level inheritance     ^           |
+              |                        |              +-----+              |           |
+              |                        +--------------+ {o} +--------------+           |
+              |                                       +--+--+                          |
+              |                                          |                             |
+              +------------------------------------------|-----------------------------+
+  +----+       +----+                                    |
+  |A{o}+-=---->+B{o}| (A writes to B)                    :
+  +----+       +----+                                    V
+                                                     +---+---+
+  +----+       +----+                                |Output |
+  |A{o}+------>+B{o}| (A reads from B)               |{d}    |
+  +----+       +----+                                +---+---+
+----
+
+In this working example, only one file is specified in the `$extends` directive.
+When more than one files are specified, and they are extending other files, the inheritance resolution will happen in a manner of "width-first" way.
+
+File Level Inheritance:: In the file level inheritance resolution, it reads a given source file, and it traces the files on `JF_PATH` environment variable.
+Through this process, a file **Work (1)** in the Figure <<inheritance>>, will be generated and its content will be as follows.
+
+[source,json]
+.Content of a temporary file: "Work (1)"
+----
+{
+  "$local": {
+    "A": {
+      "eval:$(echo -n Key)": "eval:string:$(ref .test.k)"
+    }
+  },
+  "test": {
+    "$extends": [
+      "A"
+    ],
+    "k": "hello"
+  },
+  "base": "world"
+}
+----
+
+Local Node Materialization:: A "local node" is a concept to use "inheritances" without creating files outside a source file.
+In the given source file, there is a node `$local`, under which an entry `"A": { "key": "..." }` is defined.
+This generates a file whose name is `A` under a temporary directory, which is a part of `JF_PATH` environment variable.
+Thus, exactly the same syntax and behavior is available, when a data designer places `$extends: ["A"]` somewhere in the source file.
+
+[source,json]
+.The content of file "A"
+----
+{
+  "eval:$(echo -n Key)": "eval:string:$(ref .test.k)"
+}
+----
+
+`ref` is a built-in function of the processor, and it prints a value of a node specified by an argument passed to it.
+
+Node Level Inheritance:: A node `.test` has `$extends` directive in it.
+Its value is an array whose only element is `A`.
+It extends the content of `A`, whose content was seen earlier in this section.
+After this inheritance is processed, the output of this step (Work (2 a)) will look like as follows.
+
+[source,json]
+.Content of a temporary file: "Work (2 a)"
+----
+{
+  "test": {
+    "eval:$(echo -n Key)": "eval:string:$(ref .test.k)",
+    "k": "hello"
+  },
+  "base": "world"
+}
+----
+
+=== Interpolation Mechanism
+
+After inheritances are processed, "interpolation" mechanism will be executed.
+This stage consists of two steps, which are "key-side" processing and "value-side" processing.
+
+[ditaa]
+.Interpolation Mechanism
+----
+                                                    +----+----+
+                                                    |Work(2 a)|
+                                                    |{d}      |
+                                                    +----+----+
+                                                         ^
+                                                         |
+                                              +----------|---------+templating (optional)
+                                              |          |         |
+                                              |       +--+--+      |
+                                              |       | {o} |      |key-side processing
+                                              |       +--+--+      |
+                                              |          |         |
+                                              |          :         |
+                                              |          V         |
+                                              |+---------+--------+|
+                                              ||    Work(2 b)     ||
+                                              ||internal variable ||
+                                              |+---------+--------+|
+                                              |          ^         |
+                                              |          |         |
+                                              |          |         |
+                                              |       +--+--+      |
+                                              |       | {o} |      |value-side processing
+                                              |       +--+--+      |
+                                              |          :         |
+                                              +----------|---------+
+  +----+       +----+                                    |
+  |A{o}+-=---->+B{o}| (A writes to B)                    :
+  +----+       +----+                                    V
+                                                     +---+---+
+  +----+       +----+                                |Output |
+  |A{o}+------>+B{o}| (A reads from B)               |{d}    |
+  +----+       +----+                                +---+---+
+----
+
+In these steps, string values which start with `eval:` will be replaced with the value computed from the string right next to it.
+That is, if you have a string value:
+
+----
+"key": "eval:string:$(echo 'Hello') world"
+----
+
+The part `string:` specifies the type of the node after interpolation happened.
+You can specify one of `string`, `number`, `bool`, `array`, and `object`.
+Otherwise, it will be treated as `string`.
+The part `$(echo 'Hello')` will be evaluated and embedded at the JSON path, instead of the original string, which will result in footnote:rawKeyword[To "escape" a string starting with `eval:`, you can use `raw:` keyword.
+With it, you can describe such a string as:
+`"eval:string:$(echo 'Hello') world"`.]:
+
+----
+"key": "Hello world"
+----
+
+Key-side processing:: As the name suggests, this step processes the keys starting with `eval:`.
+After this process is performed, the file will like as follows:
+
+[source,json]
+.Content of File: `Work(2 b)`
+----
+{
+  "test": {
+    "k": "hello",
+    "Hello": "eval:$(ref .test.k)"
+  },
+  "base": "world"
+}
+----
+
+Value-side processing:: This step performs the string value interpolation the same as **Key-side processing**, but for values of JSON object.
+
+[source,json]
+.Content of Output
+----
+{
+  "test": {
+    "k": "hello",
+    "Hello": "hello"
+  },
+  "base": "world"
+}
+----
+
+==== Built-in functions
+
+In addition to commands and functions visible to a bash shell on which `jq-front` runs, you can use functions listed in this section.
+
+`ref` function:: A function that returns a value of a node specified by an argument.
+This function can only work from inside "Work(2)" file.
+In case this function references a text node that starts with `eval:`, it performs templating on the node.
+This means, the `ref` function may be applied recursively.
+In case cyclic reference is found during this process, it will be reported and the process will be aborted.
+
+`curn` function:: A function that returns a path to the node that makes a call to this function.
+
+`parent` function:: A function that prints a path to a parent node of a given path.
+
+`error` function:: A function that prints a given error message and returns with a non-zero value.
+
+==== User defined functions
+
+You can define your own function for the templating stage by following syntax.
+First, you can create a file that contains definitions of your functions.
+
+[source,bash]
+.SS.sh
+----
+function hello_world() {
+  echo "Hello, world. My Function!"
+}
+----
+
+Next you reference the file inside the `$extends` syntax.
+
+[source,json]
+----
+{
+  "$extends": [
+    "SS.sh;SOURCE"
+  ],
+  "key": "eval:string:hello_world=$(hello_world),$(echo HELLO)"
+}
+----
+
+The string `SOURCE` is the keyword that tells `jq-front` to import the file.
+And as you see, you are now able to call the function you defined, `hello_world`.
+
+[source,json]
+----
+{
+  "key": "hello_world=Hello, world. My Function!,HELLO"
+}
+----
+
+The file will be rendered as you see above.
+
+=== Pipelined Approach
+
+Conventional approaches in <<background>> section do not identify readability for humans and that for machines as independent concerns.
+They process configuration files in a monolithic single step Fig. <<monolithic>>.
+
+[[monolithic, 1]]
+[mermaid]
+.Conventional Monolithic Approach
+----
+graph LR
+    App((Application))    -->|read| AppData[A: Custom Representation]
+    App -->|Parse Input, Process Inheritances and Interpolatiopns, and Perform Business Logic| App
+----
+
+An application reads configuration files, resolves references and inheritances, and it interprets their contents based on application-specific semantics.
+Based on the interpreted information, it performs required operations.
+These are executed as a single and indivisible action.
+
+Instead, the approach we are proposing separates these concerns independent and executable one by one.
+
+[[pipelinedApproach, 5.]]
+[mermaid]
+.Proposed "Pipelined" Approach
+image::images/figure-2.svg[align="center"]
+
+In the Figure <<pipelinedApproach>>, it is assumed that the application uses **YAML** or **HCL**, which are supersets of **JSON**.
+If the application uses a notation which is not a superset of **JSON**, it needs to be converted back to the original one.
+
