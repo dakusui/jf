@@ -1,0 +1,24 @@
+:toc:
+
+[[discussion]]
+== Discussion
+
+=== Interpretation of Results
+
+(t.b.d.)
+
+=== Implications
+
+(t.b.d.)
+
+=== Limitations
+
+Features beyond JSON::
+In case a notation has a feature, which cannot be represented in **JSON**, this approach requires extra treatment.
+For example, **YAML** allows to define entries with the same key multiple times, which is not valid in **JSON**.
+In such cases, we will need to introduce a convention that interprets it into **JSON**, and converts it back to **YAML**, safely.
+
+Application-level Syntax-sugars::
+An application sometimes defines its own syntax on top of its data notation for user's convenience.
+We expect such a syntax to be simplified and uniformed by applying our approach.
+However, this benefit was not examined in this study.

@@ -29,29 +29,27 @@ The benefits of limitations of the approach will be discussed in the <<discussio
 
 === Separation of Concerns: Readability for Human and Machines
 
-In our approach, we identify the human readability and the capability to make the descriptions of structured information and complex constraints "D-R-Y"ed are completely independent concerns.
+In our approach, we identify the human readability and the capability to make the descriptions of structured information with complex constraints "D-R-Y"ed are completely independent concerns.
 
+Being able to reduce repetitions might improve the human-readability as a result, still it is different from the readability improvement delivered by **YAML**, **TOML**, **HCL**, and others, where visual structures are more understandable and concise for human.
 
-Being able to reduce repetitions might improve the human-readability as a result, still it is different from the readability improvement delivered by **YAML**, **TOML**, **HCL**, and others.
-Those notations allow users not to quote strings, where obvious from the context.
-
-=== New Notation: JSON{plus}{plus}
+=== New Notation: JSON{plus}{plus} and its processor **`jq-front`**
 
 Through examining various notations, authors realized that the functionalities designed and implemented over and over again at the every corner of the industry are essentially:
 
 * Inheritances
-* Interpolations
+* Computations of node values
 
 Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, and others are designed to be "superset" of **JSON** or tools to convert them into **JSON** are available.
 
 *JSON{plus}{plus}* is a notation to implement the features but within the syntax of **JSON** by introducing a few keywords that have special semantics.
 
-As it is designed to bestrictly compliant with **JSON**, we do not need to re-implement tools to edit or manipulate it.
+As it is designed to be strictly compliant with **JSON**, we do not need to re-implement tools to edit, manipulate, or validate it.
 We can just reuse such tools developed for **JSON**.
 Applications will not need to develop its own custom configuration format.
-They will just choose one of preferred formats from **YAML**, **TOML**, etc. and define built-in files to ease user's effort.
+They will just choose one of preferred formats from **YAML**, **TOML**, etc. and define built-in files to ease user's effort, if need be.
 
-=== JSON++ processor: jq-front
+==== JSON++ processor: jq-front
 
 We implemented a processor **jq-front**<<jq-front>>, that converts data written in JSON{plus}{plus} into plain JSON.
 We named this tool after a pre-processor that converts C{plus}{plus} source code into plain C source code, **Cfront**<<Cfront>>.
@@ -214,7 +212,7 @@ After this inheritance is processed, the output of this step (Work (2 a)) will l
 }
 ----
 
-=== Interpolation Mechanism
+==== Interpolation Mechanism
 
 After inheritances are processed, "interpolation" mechanism will be executed.
 This stage consists of two steps, which are "key-side" processing and "value-side" processing.

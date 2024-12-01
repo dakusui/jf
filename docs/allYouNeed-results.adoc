@@ -1,0 +1,237 @@
+:toc:
+
+[[results]]
+== Results
+
+In this section, we will apply our method to a few existing software products;
+**pyproject**, **Cucumber**, and **commandunit**, each of uses **TOML**, **Gherkin**, and **YAML**.
+
+=== `pyproject.toml`
+
+[%collapsible]
+====
+[source,toml]
+----
+[tool.poetry]
+name = "my_project"
+version = "0.1.0"
+description = "An example project showing pyproject.toml redundancy"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.25.1"
+
+[tool.poetry.dev-dependencies]
+black = "^22.3.0"
+isort = "^5.10.1"
+mypy = "^0.910"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# Repetition in tool-specific configurations
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_third_party = ["requests"]
+
+[tool.mypy]
+python_version = 3.8
+ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["my_project"]
+
+[tool.coverage.report]
+fail_under = 80
+omit = [
+    "tests/*",
+]
+
+[tool.flake8]
+max-line-length = 88
+ignore = ["E203", "W503"]
+----
+====
+
+=== `commandunit`
+
+The tool **commandunit** is designed for integration tests for commandline programs.
+It allows users to write tests in given-when-then style using YAML.
+
+[%collapsible]
+====
+[source,yaml]
+----
+#file: noinspection YAMLIncompatibleTypes
+---
+type: NORMAL
+description: []
+given:
+  description:
+  - This step should always be executed.
+  stdin: []
+  shell:
+    name: bash
+    options:
+    - "-eu"
+    - "-E"
+  source: []
+  environmentVariables:
+    COMMANDUNIT_DEPENDENCIES_ROOT: _{COMMANDUNIT_BUILTIN_ROOT}
+    COMMANDUNIT_BUILTIN_ROOT: _{COMMANDUNIT_DEPENDENCIES_ROOT}x
+  cmd: ":"
+  args: []
+when:
+  description: []
+  stdin: []
+  shell:
+    name: bash
+    options:
+    - "-eu"
+    - "-E"
+  source:
+  - "${COMMANDUNIT_BUILTIN_ROOT}/bud/lib/core.rc"
+  - "${SCRIPTS_DIR}/target_lib.rc"
+  environmentVariables:
+    COMMANDUNIT_DEPENDENCIES_ROOT: _{COMMANDUNIT_BUILTIN_ROOT}
+    COMMANDUNIT_BUILTIN_ROOT: _{COMMANDUNIT_DEPENDENCIES_ROOT}
+    SCRIPTS_DIR: "${COMMANDUNIT_PROJECT_DIR}/src/main/scripts"
+  cmd: cat
+  args:
+  - "${SCRIPTS_DIR}/hello.txt"
+then:
+  description: []
+  exitCode:
+  - EQUAL
+  - 0
+  stdout:
+    present:
+    - REGEX:Hello world
+    absent: []
+  stderr:
+    present: []
+    absent:
+    - REGEX:.+
+----
+====
+
+However, quite a few elements are repeated, and they should be defined for a test suite, not for individual test cases.
+If we extract such items in a separate file, `core/base.json`, the test case will look like as follows:
+
+[source,yaml]
+----
+#file: noinspection YAMLIncompatibleTypes
+---
+"$extends":
+  - core/base.json
+when:
+  environmentVariables:
+    SCRIPTS_DIR: "${COMMANDUNIT_PROJECT_DIR}/src/main/scripts"
+  source:
+    - ${COMMANDUNIT_BUILTIN_ROOT}/bud/lib/core.rc
+    - ${SCRIPTS_DIR}/target_lib.rc
+  cmd: cat
+  args:
+    - ${SCRIPTS_DIR}/hello.txt
+then:
+  exitCode:
+    - EQUAL
+    - 0
+  stdout:
+    present:
+      - REGEX:Hello world
+  stderr:
+    absent:
+      - REGEX:.+
+----
+
+Following is the `core/base.json` files that should be shared across test cases in the same test suite.
+
+[%collapsible]
+====
+[source,json]
+.`base/normal.json`
+----
+{
+  "type": "NORMAL",
+  "description": [
+  ],
+  "given": {
+    "description": [
+      "This step should always be executed."
+    ],
+    "stdin": [
+    ],
+    "shell": {
+      "name": "bash",
+      "options": [
+        "-eu",
+        "-E"
+      ]
+    },
+    "source": [
+    ],
+    "environmentVariables": {
+      "COMMANDUNIT_DEPENDENCIES_ROOT": "eval:string:${COMMANDUNIT_BUILTIN_ROOT}",
+      "COMMANDUNIT_BUILTIN_ROOT": "eval:string:${COMMANDUNIT_DEPENDENCIES_ROOT}x"
+    },
+    "cmd": ":",
+    "args": [
+    ]
+  },
+  "when": {
+    "description": [
+    ],
+    "stdin": [
+    ],
+    "shell": {
+      "name": "bash",
+      "options": [
+        "-eu",
+        "-E"
+      ]
+    },
+    "source": [
+    ],
+    "environmentVariables": {
+      "COMMANDUNIT_DEPENDENCIES_ROOT": "eval:string:_{COMMANDUNIT_BUILTIN_ROOT}",
+      "COMMANDUNIT_BUILTIN_ROOT": "eval:string:_{COMMANDUNIT_DEPENDENCIES_ROOT}"
+    },
+    "cmd": "eval:string:$(error 'missing attribute!')",
+    "args": [
+    ]
+  },
+  "then": {
+    "description": [
+    ],
+    "exitCode": [
+      "EQUAL",
+      0
+    ],
+    "stdout": {
+      "present": [
+      ],
+      "absent": [
+      ]
+    },
+    "stderr": {
+      "present": [
+      ],
+      "absent": [
+      ]
+    }
+  }
+}
+----
+====
+
+NOTE:: This approach doesn't require IDE support for JSON++ as it is just a subset of JSON.

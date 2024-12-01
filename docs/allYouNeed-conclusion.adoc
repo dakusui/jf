@@ -1,0 +1,49 @@
+:toc:
+
+[[conclusion]]
+== Conclusion
+
+In the software industry, various notations (**YAML**, **TOML**, **HOCON**, **HCL**, ...) have been developed and used in order to describe structured information with complex constraints.
+These notations have their own philosophies about "readability".
+Some of them have features to reduce redundancies by reusing node values within a file.
+Such features have been implemented as a feature of an application.
+However, these features are more or less similar to each others, and therefore, similar functionalities have implemented by parsers of different notations and applications repeatedly.
+To address this situation, we proposed a new approach, where in this article:
+
+1. Readability for humans and readability for machines are clearly separated as independent concerns.
+2. Readability for humans are left to individual notations.
+This layer is called "human-aware notation"
+3. Introduce "human-aware notation" agnostic syntax to model inheritances and node-value computation inside **JSON** level.
+This enhanced **JSON** syntax is called **JSON{plus}{plus}**.
+4. Pipeline stages, one of which converts data from "human-aware notation" to **JSON**, another processes **JSON{plus}{plus}** to plain-**JSON**, and then the processed **JSON** converted back to the original format to be passed to the original tool.
+
+This approach delivered benefits to application users, where experiences across applications are uniformed and efforts to learn new application's syntax are reduced.
+
+For application developers, it is also beneficial because burdens to implement syntax sugars for their configuration notations will be removed because it will be a user side concern.
+This approach allows us to keep using the already existing tool supports,
+such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
+
+
+=== Future Works
+
+A fituFig. <<technique>> section, we discussed "Pipelined approach".
+If we further apply this approach to a broader scope, we can think of an ecosystem,
+where applications concentrate on their business logics,
+while notations concentrate on their human-readability in their contexts.
+
+."Ideal World" to be delivered by JSON++
+image::images/figure-3.svg[align="center"]
+
+That is, as **HCL** is a notation for describing configurations of distributed systems,
+it should focus on human-readability for such system's deployments.
+Features such as referencing values of other nodes, defining a new node from existing other nodes, and maintaining consistency among values of nodes, should be left to **JSON**-level processor, such as **jq-front**.
+
+To achieve such an eco-system, authors think following features will keys:
+
+Faster Implementation of the Processor::
+Right now, **jq-front** is implemented as a **bash** script.
+While this resulted in a simple design, the performance overhead is not negligible.
+Implementation in faster languages such as **Java**, **Golang**, **Rust**, or whatever else is desired.
+
+Refining finer details such as semantics on multiple inheritances.
+That is, what should happen when different types of nodes are found at the same JSON path location.

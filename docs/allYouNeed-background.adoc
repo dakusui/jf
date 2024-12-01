@@ -1,0 +1,104 @@
+:toc:
+
+[[background]]
+== Background and Related Work
+
+In software industry, although it is considered important practice to follow the "D-R-Y" (Don't repeat yourself) principle<<dry>>, configuration files and other data files sometimes become repetitive and hard to maintain.
+For example, to configure a distributed system, to define test cases, or to define characters and stages for a game, we need to describe similar yet slightly different files over and over again.
+
+For applications developed in those areas, various notations have been developed and used.
+Such as **YAML**, **TOML**, **HOCON**<<hocon>>, **HCL**, **Gherkin**, etc.
+
+In order to mitigate the redundant descriptions, some of them have features to define information using concepts of inheritances and references.
+Not only that, some software products avoid this situation by introducing their own syntax sugars to their configuration file specifications.
+
+Figure <<figure.statusQuo>> shows this situation as a model.
+
+[[figure.statusQuo, 1.]]
+.Status Quo
+image::images/figure-1.svg[statusQuo, align="center"]
+
+Each notation may have inheritances and references as its own features.
+Not only that, each application may have inheritances and node references as its feature to help its users.
+On top of that, they may have syntax sugars if the designer thinks it's necessary to help their users.
+
+This creates following challenges in the industry.
+
+* Application developers need to implement common features such as inheritances and reference resolutions for each product every time.
+* The same feature is implemented using different syntaxes of the host notation, or a syntax the application defines.
+This increases learning costs of application specifications.
+* Semantics of the same feature can be subtly different, which will sometimes result in expensive costs.
+For instance, multiple inheritance is necessary to reduce redundancy in configuration files.
+However, is it implemented using depth first search or width first search?
+This can create a discrepancy in users/operators mind about a product's expected behaviors.
+
+.Features of Various Data Notations
+|===
+| Feature| YAML| TOML| HOCON| HCL| Gherkin| XML
+
+| **Single Inheritance**
+| ✔️ (using anchors/aliases)
+| ❌ (no direct support)
+| ✔️ (using object merging)
+| ✔️ (using modules)
+| ❌ (no direct support)
+| ⚠️ (using DTD or XSD, limited)
+
+| **Multiple Inheritance**
+| ⚠️ (with merge arrays but limited)
+| ❌ (no direct support)
+| ✔️ (using fallbacks/merging)
+| ❌ (no direct support.
+It can be simulated by combining modules)
+| ❌ (no direct support)
+| ❌ (no direct support)
+
+| **Nested Inheritance**
+| ✔️ (with layered anchors)
+| ❌ (no direct support)
+| ✔️ (layered object merging)
+| ⚠️ (limited support via module chaining)
+| ❌ (no direct support)
+| ⚠️ (using nested elements, limited)
+
+| **Node References**
+| ✔️ (anchors/aliases for references)
+| ❌ (no direct support)
+| ✔️ (substitution with `${}` syntax)
+| ✔️ (expressions and variable references)
+| ❌ (no direct support)
+| ⚠️ (using XPointer or XPath, limited)
+
+| **Limitations of Multiple Inheritance**
+| Limited by merge key order; complex configurations can become difficult to read
+| Not supported natively; manual repetition required
+| Supported but can be complex in deeply nested structures
+| Not directly supported; combining modules is complex
+| Not supported; only supports simple statements
+| Not supported; merging different schemas requires external processing
+
+| **Relationship with JSON**
+| ✔️ (YAML is a superset)
+| ❌ (not a superset)
+| ✔️ (HOCON is a superset)
+| ❌ (not a superset)
+| ❌ (not a superset)
+| ❌ (not a superset, but can be converted)
+
+| **Tool to Convert to JSON**
+| PyYAML, js-yaml (JavaScript)
+| TomlKit, toml (Python)
+| Lightbend Config (Scala/Java), pyhocon (Python)
+| hcl2json (Go)
+| Cucumber (with JSON formatter)
+| xmltodict (Python), xml2js (JavaScript)
+|===
+
+From this matrix, you may think that **HOCON** provides all the necessary functionalities.
+However, it still has the following challenges in practice.
+
+* **HOCON** is a much less popular notation than **YAML**.
+* Learning **HOCON** is an extra cost for users of an application whose notation isn't based on it.
+* It doesn't allow to define a function so that a formula to compute a node value can be reused.
+
+Thus, we state that there is no good solution to the problems.
