@@ -13,17 +13,17 @@ Then, we introduce a notation which focuses on the latter, called **JSON{plus}{p
 Based on it, we demonstrate a pipeline-based approach is possible, where data defined in human-readability focused notations such as **YAML** and **HCL** are transformed into **JSON{plus}{plus}**.
 Finally, it will be shown that such DRY features can be expressed by **JSON{plus}{plus}** syntax in a uniformed way, which reduces learning cost for users and allows for developers to focus on human-readability of the notations.
 
-include::allYouNeed-introduction.adoc[]
+include::allYouNeed/introduction.adoc[]
 
-include::allYouNeed-background.adoc[]
+include::allYouNeed/background.adoc[]
 
-include::allYouNeed-technique.adoc[]
+include::allYouNeed/technique.adoc[]
 
-include::allYouNeed-results.adoc[]
+include::allYouNeed/results.adoc[]
 
-include::allYouNeed-discussion.adoc[]
+include::allYouNeed/discussion.adoc[]
 
-include::allYouNeed-conclusion.adoc[]
+include::allYouNeed/conclusion.adoc[]
 
 [bibliography]
 == References
@@ -56,4 +56,4 @@ US: Addison-Wesley. pp. 320. ISBN 978–0201616224
 [[appendix]]
 == Appendix
 
-include::allYouNeed-appendix-builtInFunctions.adoc[]
+include::allYouNeed/builtInFunctions.adoc[]

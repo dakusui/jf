@@ -25,7 +25,7 @@ This will further deliver evolutions in human- and machine- readability of appli
 
 We can think of another approach to employ templating engines such as Handlebars<<handlebars>> and Mustache<<mustache>>.
 However, it will create other challenges because it makes template files invalid in original notations.
-The benefits of limitations of the approach will be discussed in the <<discussion>> section compared with ours.
+The benefits and limitations of the approach will be discussed in the <<discussion>> section compared with ours.
 
 === Separation of Concerns: Readability for Human and Machines
 
