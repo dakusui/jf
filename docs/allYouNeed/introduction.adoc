@@ -5,8 +5,8 @@
 
 **Status Quo:** Not a few similar yet different notations have been proposed and applied to various software products to describe information with complex structures and constraints.
 
-This is a situation found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions.
-There are such tools to manage instances under **docker**<<docker>> and **Kubernetes**<<k8s>>.
+This is a situation found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions, but not limited to.
+In distributed system management, there are tools to manage instances under **docker**<<docker>> and **Kubernetes**<<k8s>>.
 Most of them use **YAML**<<kustomize>><<helm>><<docker-compose>>, but **Terraform**<<terraform>> uses its own notation; **HCL**.
 Not only that, in testing field, **runn**<<runn>> and **commandunit**<<commandunit>> use **YAML**<<yaml>>, while **Cucumber**<<cucumber>> uses **Gherkin**<<gherkin>>.
 Another notation is **TOML**, which is used for building python projects<<pyproject>>, widely used for python projects, but not limited to.
@@ -15,12 +15,15 @@ For instance, configuring blog system<<hugo>>.
 In short, currently, various applications use various notations to define their own DSLs for configurations and tests.
 However, they share common concerns and keep addressing similar problems repetitively, which is inefficient, error-prone, and raising learning costs for users.
 
-**Proposed Method:**  We propose a new method, which is designed based on following principles:
+**Proposed Method:**  We propose a new method, which is designed based on the following principles:
 
-1. We consider human-readability and conciseness are completely separate concerns.
+1. Consider human readability and conciseness are completely separate concerns.
 "Conciseness" here means the ability to describe structured information without redundancy under a given grammarfootnote:humanReadability[Verboseness of the grammar should be addressed as a part of human-readability and achieved by the design of the grammar.].
-2. A notation we propose is called **JSON{plus}{plus}**, which is strictly complying with **JSON**.
-It has a few keywords that allows users to use inheritances, compute a node's value from other nodes with a formula, and reuse a formula to compute  a node's value.
+2. Introduce notation neutral syntax to express data concisely.
+The syntax is designed as an application of **JSON**<<json>>, because all the notations we think of can be converted into/back from it easily with widely available tools.
+The syntax is called **JSON{plus}{plus}**, and designed any valid **JSON{plus}{plus}** is a valid **JSON** file.
+By processing the enhanced syntax, a **JSON{plus}{plus}** is rendered into a conventional **JSON** file.
+It has a few keywords that allow users to use inheritances, compute a node's value from other nodes with a formula, and reuse a formula to compute a node's value.
 3. We also present a reference implementation of a processor for **JSON{plus}{plus}**, called **jq-front**<<jq-front>>.
 4. Based on that, we will propose a pipelined approach, whose first stage converts human-readable input files into JSON files.
 The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files and resolve inheritances and interpolations defined in them.
@@ -28,12 +31,11 @@ The pipeline will then process the **JSON** files as **JSON{plus}{plus}** files 
 This is a situation, where the industry is against at a principle in the UNIX philosophy: "Make each program do one thing well".
 
 In this article, we provide a working example of toolchains, where notations are focusing on human-readability, applications are focusing on its functionalities, and "machine-readability" is taken care of by an independent component.
-With this, we aim at deliver a way to achieve "Build programs to work together", another important UNIX philosophy.
+With this, we aim at delivering a way to achieve "Build programs to work together", another important UNIX philosophy.
 
 **Evaluation and Results:** In the <<results>> section, we will show case-study results, where the method is applied to a few real-world examples, such as **TOML**<<toml>> used in `pyproject.toml`, tests written in **Gherkin** and **YAML**,
 
-This approach allows us to keep using the already existing tool supports,
-such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
+This approach allows us to keep using the already existing tool supports, such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
 For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
 Because it will be a user side concern.
 Only in case they want to uniform how such configurations should be written, or they want to reduce user side effort, they can bundle **JSON{plus}{plus}** files which define reasonable default values with their product.
