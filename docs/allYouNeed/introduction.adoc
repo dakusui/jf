@@ -16,7 +16,7 @@ In short, currently, various applications use various notations to define their 
 However, they share common concerns and keep addressing similar problems repetitively, which is inefficient, error-prone, and raising learning costs for users.
 This is a situation violating principle in the UNIX philosophy: "Make each program do one thing well" and "Don't repeat yourself".
 
-**Proposed Method:**  We propose a new method, which is designed based on the following principles:
+**Proposed Method:**  We propose a new method, which is designed based on the following ideas:
 
 1. Consider human readability and conciseness are completely separate concerns.
 "Conciseness" here means the ability to describe structured information without redundancy under a given grammarfootnote:humanReadability[Verboseness of the grammar should be addressed as a part of human-readability and achieved by the design of the grammar.].
