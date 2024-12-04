@@ -3,6 +3,12 @@
 [[discussion]]
 == Discussion
 
+// NOTE
+this approach allows us to keep using the already existing tool supports, such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
+For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
+Users will be able to take care of it by themselves using inheritances and reusable node value computations.
+Only in case they want to uniform how such configurations should be written across their users, they can bundle standard **JSON{plus}{plus}** files which define reasonable default values and reusable logics for the default values of their product.
+
 === Interpretation of Results
 
 (t.b.d.)

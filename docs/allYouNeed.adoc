@@ -6,12 +6,12 @@
 
 **Abstract:** In various areas of software development, to describe information with complex structures and constraints, a number of similar but different notations have been proposed and used.
 This is especially frequent in configurations of distributed systems.
-These notations and software products have different syntaxes and no compatibility.
+These notations and software products have different syntaxes and no direct compatibility.
 Because of that, learning and development costs have been more expensive than it can be.
-In this article, we strictly identify a notation's human-readability and functionality are separate ones.
+In this article, we strictly identify a notation's human-readability and capability to make documents concise are separate ones.
 Then, we introduce a notation which focuses on the latter, called **JSON{plus}{plus}**.
 Based on it, we demonstrate a pipeline-based approach is possible, where data defined in human-readability focused notations such as **YAML** and **HCL** are transformed into **JSON{plus}{plus}**.
-Finally, it will be shown that such DRY features can be expressed by **JSON{plus}{plus}** syntax in a uniformed way, which reduces learning cost for users and allows for developers to focus on human-readability of the notations.
+Finally, it will be shown that documents written in different formats can be expressed using **JSON{plus}{plus}** syntax in a uniformed and concise way, which reduces learning cost for users and allows for application developers to focus on the core functionality of their artifacts.
 
 include::allYouNeed/introduction.adoc[]
 

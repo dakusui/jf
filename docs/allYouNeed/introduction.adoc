@@ -35,10 +35,14 @@ With this, we aim at delivering a way to achieve "Build programs to work togethe
 
 **Evaluation and Results:** In the <<results>> section, we will show case-study results, where the method is applied to a few real-world examples, such as **TOML**<<toml>> used in `pyproject.toml`, tests written in **Gherkin** and **YAML**,
 
-This approach allows us to keep using the already existing tool supports, such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
-For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
-Users will be able to take care of it by themselves using inheritances and reusable node value computations.
-Only in case they want to uniform how such configurations should be written across their users, they can bundle standard **JSON{plus}{plus}** files which define reasonable default values and reusable logics for the default values of their product.
+It will also be discussed how and when proposed approach becomes beneficial comparing to another approach, where "templating engines" are employed in the <<discussion>> section.
+
+**Contributions:** This paper makes the following contributions:
+
+- A Novel Architecture: t.b.d.
+- Empirical Validation: t.b.d. style example: We demonstrate the effectiveness of our model on machine translation tasks, achieving state-of-the-art performance on the WMT 2014 English-to-German dataset.
+- Generalizability: t.b.d. style example: We show that the Transformer architecture generalizes well to other sequence modeling tasks, including text summarization and question answering.
+
 
 The rest of this paper is organized as follows:
 In <<background>>, we will discuss how the problem of repetitiveness in configuration files and other sorts of files has been addressed, or not addressed.
