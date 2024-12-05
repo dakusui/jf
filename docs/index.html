@@ -481,6 +481,7 @@ body {font-family: Arial;}
   <img src="images/github.png" width="60px;20px" onclick="location.href = 'https://github.com/dakusui/jq-front';" align="middle"/>
 </button>
 <button class="tablinks" onclick="openTab(event, 'top')" id="defaultOpen">top</button>
+<button class="tablinks" onclick="openTab(event, 'allYouNeed')">allYouNeed</button>
 <button class="tablinks" onclick="openTab(event, 'design')">design</button>
 <button class="tablinks" onclick="openTab(event, 'faq')">faq</button>
 <button class="tablinks" onclick="openTab(event, 'features')">features</button>
@@ -488,6 +489,1681 @@ body {font-family: Arial;}
 <button class="tablinks" onclick="openTab(event, 'limitationsAndFutureWork')">limitationsAndFutureWork</button>
 <button class="tablinks" onclick="openTab(event, 'manual')">manual</button>
 <button class="tablinks" onclick="openTab(event, 'syntax')">syntax</button>
+</div>
+<div id="allYouNeed" class="tabcontent">
+<div id="allYouNeed_content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p><strong>Abstract:</strong> In various areas of software development, to describe information with complex structures and constraints, a number of similar but different notations have been proposed and used.
+This is especially frequent in configurations of distributed systems.
+These notations and software products have different syntaxes and no direct compatibility.
+Because of that, learning and development costs have been more expensive than it can be.
+In this article, we strictly identify a notation’s human-readability and capability to make documents concise are separate ones.
+Then, we introduce a notation which focuses on the latter, called <strong>JSON++</strong>.
+Based on it, we demonstrate a pipeline-based approach is possible, where data defined in human-readability focused notations such as <strong>YAML</strong> and <strong>HCL</strong> are transformed into <strong>JSON++</strong>.
+Finally, it will be shown that documents written in different formats can be expressed using <strong>JSON++</strong> syntax in a uniformed and concise way, which reduces learning cost for users and allows for application developers to focus on the core functionality of their artifacts.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="introduction">Introduction</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><strong>Status Quo:</strong> Not a few similar yet different notations have been proposed and applied to various software products to describe information with complex structures and constraints.</p>
+</div>
+<div class="paragraph">
+<p>This is a situation found especially frequent in configuration files of distributed systems backed by containerized virtualization solutions, but not limited to.
+In distributed system management, there are tools to manage instances under <strong>docker</strong><a href="#docker">[1]</a> and <strong>Kubernetes</strong><a href="#k8s">[2]</a>.
+Most of them use <strong>YAML</strong><a href="#kustomize">[4]</a><a href="#helm">[3]</a><a href="#docker-compose">[5]</a>, but <strong>Terraform</strong><a href="#terraform">[6]</a> uses its own notation; <strong>HCL</strong>.
+Not only that, in testing field, <strong>runn</strong><a href="#runn">[7]</a> and <strong>commandunit</strong><a href="#commandunit">[8]</a> use <strong>YAML</strong><a href="#yaml">[9]</a>, while <strong>Cucumber</strong><a href="#cucumber">[10]</a> uses <strong>Gherkin</strong><a href="#gherkin">[11]</a>.
+Another notation is <strong>TOML</strong>, which is used for building python projects<a href="#pyproject">[12]</a>, widely used for python projects, but not limited to.
+For instance, configuring blog system<a href="#hugo">[13]</a>.</p>
+</div>
+<div class="paragraph">
+<p>In short, currently, various applications use various notations to define their own DSLs for system configurations, tests, or product management.
+However, they share common concerns and keep addressing similar problems repetitively, which is inefficient, error-prone, and raising learning costs for users.
+This is a situation violating principle in the UNIX philosophy: "Make each program do one thing well" and "Don’t repeat yourself".</p>
+</div>
+<div class="paragraph">
+<p><strong>Proposed Method:</strong>  We propose a new method, which is designed based on the following ideas:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Consider human readability and conciseness are completely separate concerns.
+"Conciseness" here means the ability to describe structured information without redundancy under a given grammar<sup class="footnote" id="_footnote_humanReadability">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup>.</p>
+</li>
+<li>
+<p>Introduce notation neutral syntax to express data concisely.
+The syntax is designed to be surjective from one notation to itself.
+It has a few keywords to enable inheritances and computations of node values from others.
+Given a notation <strong>N</strong>, a new notation enhanced by the syntax will be called <strong>N++</strong>
+In general, each well-known notation can be converted into/back from <strong>JSON</strong><a href="#json">[json]</a>.
+This means once we implement <strong>N++</strong> processor for <strong>JSON</strong>, it can be used for all these notations mentioned above just by employing it as a stage in a pipeline.
+We call <strong>N++</strong> for <strong>JSON</strong> as "<strong>JSON++</strong>", and documents written in it <strong>JSON++</strong> documents in this article.
+Its processor renders a <strong>JSON++</strong> document into a conventional <strong>JSON</strong> document.</p>
+</li>
+<li>
+<p>We also present a reference implementation of a processor for <strong>JSON++</strong>, called <strong>jq-front</strong><a href="#jq-front">[16]</a>.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>In this article, we provide a working example of toolchains, where notations are focusing on human-readability, applications are focusing on its functionalities, and "machine-readability" is taken care of by an independent component.
+With this, we aim at delivering a way to achieve "Build programs to work together", another important UNIX philosophy.</p>
+</div>
+<div class="paragraph">
+<p><strong>Evaluation and Results:</strong> In the <a href="#results">Results</a> section, we will show case-study results, where the method is applied to a few real-world examples, such as <strong>TOML</strong><a href="#toml">[15]</a> used in <code>pyproject.toml</code>, tests written in <strong>Gherkin</strong> and <strong>YAML</strong>,</p>
+</div>
+<div class="paragraph">
+<p>It will also be discussed how and when proposed approach becomes beneficial comparing to another approach, where "templating engines" are employed in the <a href="#discussion">Discussion</a> section.</p>
+</div>
+<div class="paragraph">
+<p><strong>Contributions:</strong> This paper makes the following contributions:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A Novel Architecture: t.b.d.</p>
+</li>
+<li>
+<p>Empirical Validation: t.b.d. style example: We demonstrate the effectiveness of our model on machine translation tasks, achieving state-of-the-art performance on the WMT 2014 English-to-German dataset.</p>
+</li>
+<li>
+<p>Generalizability: t.b.d. style example: We show that the Transformer architecture generalizes well to other sequence modeling tasks, including text summarization and question answering.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The rest of this paper is organized as follows:
+In <a href="#background">Background and Related Work</a>, we will discuss how the problem of repetitiveness in configuration files and other sorts of files has been addressed, or not addressed.
+In <a href="#technique">Technique</a>, the details of our approach and the syntax we designed for this approach will be described.
+Then in <a href="#results">Results</a>, we look into how much the approach can reduce the size of configuration files by applying it to an actual example.
+In the <a href="#conclusion">Conclusion</a>, we will summarize our findings and future works.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="background">Background and Related Work</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In software industry, although it is considered important practice to follow the "D-R-Y" (Don’t repeat yourself) principle<a href="#dry">[14]</a>, configuration files and other data files sometimes become repetitive and hard to maintain.
+For example, to configure a distributed system, to define test cases, or to define characters and stages for a game, we need to describe similar yet slightly different files over and over again.</p>
+</div>
+<div class="paragraph">
+<p>For applications developed in those areas, various notations have been developed and used.
+Such as <strong>YAML</strong>, <strong>TOML</strong>, <strong>HOCON</strong><a href="#hocon">[18]</a>, <strong>HCL</strong>, <strong>Gherkin</strong>, etc.</p>
+</div>
+<div class="paragraph">
+<p>In order to mitigate the redundant descriptions, some of them have features to define information using concepts of inheritances and references.
+Not only that, some software products avoid this situation by introducing their own syntax sugars to their configuration file specifications.</p>
+</div>
+<div class="paragraph">
+<p>Figure <a href="#figure.statusQuo">1.</a> shows this situation as a model.</p>
+</div>
+<div id="figure.statusQuo" class="imageblock text-center">
+<div class="content">
+<img src="images/figure-1.svg" alt="statusQuo"/>
+</div>
+<div class="title">Figure 1. Status Quo</div>
+</div>
+<div class="paragraph">
+<p>Each notation may have inheritances and references as its own features.
+Not only that, each application may have inheritances and node references as its feature to help its users.
+On top of that, they may have syntax sugars if the designer thinks it’s necessary to help their users.</p>
+</div>
+<div class="paragraph">
+<p>This creates following challenges in the industry.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Application developers need to implement common features such as inheritances and reference resolutions for each product every time.</p>
+</li>
+<li>
+<p>The same feature is implemented using different syntaxes of the host notation, or a syntax the application defines.
+This increases learning costs of application specifications.</p>
+</li>
+<li>
+<p>Semantics of the same feature can be subtly different, which will sometimes result in expensive costs.
+For instance, multiple inheritance is necessary to reduce redundancy in configuration files.
+However, is it implemented using depth first search or width first search?
+This can create a discrepancy in users/operators mind about a product’s expected behaviors.</p>
+</li>
+</ul>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 1. Features of Various Data Notations</caption>
+<colgroup>
+<col style="width: 14.2857%;"/>
+<col style="width: 14.2857%;"/>
+<col style="width: 14.2857%;"/>
+<col style="width: 14.2857%;"/>
+<col style="width: 14.2857%;"/>
+<col style="width: 14.2857%;"/>
+<col style="width: 14.2858%;"/>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Feature</th>
+<th class="tableblock halign-left valign-top">YAML</th>
+<th class="tableblock halign-left valign-top">TOML</th>
+<th class="tableblock halign-left valign-top">HOCON</th>
+<th class="tableblock halign-left valign-top">HCL</th>
+<th class="tableblock halign-left valign-top">Gherkin</th>
+<th class="tableblock halign-left valign-top">XML</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Single Inheritance</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (using anchors/aliases)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (using object merging)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (using modules)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">⚠️ (using DTD or XSD, limited)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Multiple Inheritance</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">⚠️ (with merge arrays but limited)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (using fallbacks/merging)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support.
+It can be simulated by combining modules)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Nested Inheritance</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (with layered anchors)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (layered object merging)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">⚠️ (limited support via module chaining)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">⚠️ (using nested elements, limited)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Node References</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (anchors/aliases for references)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (substitution with <code>${}</code> syntax)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (expressions and variable references)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (no direct support)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">⚠️ (using XPointer or XPath, limited)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Limitations of Multiple Inheritance</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Limited by merge key order; complex configurations can become difficult to read</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not supported natively; manual repetition required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Supported but can be complex in deeply nested structures</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not directly supported; combining modules is complex</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not supported; only supports simple statements</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not supported; merging different schemas requires external processing</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Relationship with JSON</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (YAML is a superset)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (not a superset)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✔️ (HOCON is a superset)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (not a superset)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (not a superset)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌ (not a superset, but can be converted)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Tool to Convert to JSON</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">PyYAML, js-yaml (JavaScript)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TomlKit, toml (Python)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lightbend Config (Scala/Java), pyhocon (Python)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">hcl2json (Go)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cucumber (with JSON formatter)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">xmltodict (Python), xml2js (JavaScript)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>From this matrix, you may think that <strong>HOCON</strong> provides all the necessary functionalities.
+However, it still has the following challenges in practice.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>HOCON</strong> is a much less popular notation than <strong>YAML</strong>.</p>
+</li>
+<li>
+<p>Learning <strong>HOCON</strong> is an extra cost for users of an application whose notation isn’t based on it.</p>
+</li>
+<li>
+<p>It doesn’t allow to define a function so that a formula to compute a node value can be reused.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Thus, we state that there is no good solution to the problems.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="technique">Technique</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>As stated in the <a href="#background">Background and Related Work</a> section, the industry has tried to address similar problems via different approaches.</p>
+</div>
+<div class="paragraph">
+<p>In order to improve human-readability, where visual structure on an editor screen, resemblance with existing formats, or number of lines and tokens matter more, various notations have been introduced, such as <strong>YAML</strong>, <strong>TOML</strong>, <strong>HCL</strong>, or <strong>HOCON</strong>.</p>
+</div>
+<div class="paragraph">
+<p>Some of these notations have features to make texts less redundant as much as possible.
+For instance, <strong>YAML</strong> allows a node to "inherit" another in the same file.
+<strong>HOCON</strong> and <strong>HCL</strong> have features to reference other nodes' values to define a value of a node on top of inheritances.
+Such features are sometimes implemented as a part of application programs.
+Without these features, users will need to define the same values and structures multiple times, which is error-prone and causes poor user-experiences.
+In this article, we refer to such features <strong>syntax sugars</strong>, which are improving "machine-readability" as it helps keep notation processors of applications simple.</p>
+</div>
+<div class="paragraph">
+<p>However, in this situation, where each notation and application has its own syntax sugars, user-experiences across applications are already damaged.
+Because the learning costs of a notation will be expensive, behaviors of similar features will be not consistent and subtly different.</p>
+</div>
+<div class="paragraph">
+<p>In this section, we will discuss a novel processing pipeline, where human-readability and machine-readability are addressed as separate concerns.
+To achieve this approach, we have created a tool called <strong>jq-front</strong><a href="#jq-front">[16]</a> and a pipeline that employs it.</p>
+</div>
+<div class="paragraph">
+<p>This approach enables a single uniformed yet sufficiently powerful set of syntax sugars and various human-readable notations at the same time in a consistent manner.
+This will further deliver evolutions in human- and machine- readability of application data notations.</p>
+</div>
+<div class="paragraph">
+<p>We can think of another approach to employ templating engines such as Handlebars<a href="#handlebars">[19]</a> and Mustache<a href="#mustache">[20]</a>.
+However, it will create other challenges because it makes template files invalid in original notations.
+The benefits and limitations of the approach will be discussed in the <a href="#discussion">Discussion</a> section compared with ours.</p>
+</div>
+<div class="sect2">
+<h3 id="_separation_of_concerns_readability_for_human_and_machines">Separation of Concerns: Readability for Human and Machines</h3>
+<div class="paragraph">
+<p>In our approach, we identify the human readability and the capability to make the descriptions of structured information with complex constraints "D-R-Y"ed are completely independent concerns.</p>
+</div>
+<div class="paragraph">
+<p>Being able to reduce repetitions might improve the human-readability as a result, still it is different from the readability improvement delivered by <strong>YAML</strong>, <strong>TOML</strong>, <strong>HCL</strong>, and others, where visual structures are more understandable and concise for human.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_new_notation_json_and_its_processor_jq_front">New Notation: JSON++ and its processor <strong><code>jq-front</code></strong></h3>
+<div class="paragraph">
+<p>Through examining various notations, authors realized that the functionalities designed and implemented over and over again at the every corner of the industry are essentially:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Inheritances</p>
+</li>
+<li>
+<p>Computations of node values</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Also, all those notations, such as <strong>YAML</strong>, <strong>TOML</strong>, <strong>HOCON</strong>, <strong>HCL</strong>, and others are designed to be "superset" of <strong>JSON</strong> or tools to convert them into <strong>JSON</strong> are available.</p>
+</div>
+<div class="paragraph">
+<p><strong>JSON++</strong> is a notation to implement the features but within the syntax of <strong>JSON</strong> by introducing a few keywords that have special semantics.</p>
+</div>
+<div class="paragraph">
+<p>As it is designed to be strictly compliant with <strong>JSON</strong>, we do not need to re-implement tools to edit, manipulate, or validate it.
+We can just reuse such tools developed for <strong>JSON</strong>.
+Applications will not need to develop its own custom configuration format.
+They will just choose one of preferred formats from <strong>YAML</strong>, <strong>TOML</strong>, etc. and define built-in files to ease user’s effort, if need be.</p>
+</div>
+<div class="sect3">
+<h4 id="_json_processor_jq_front">JSON++ processor: jq-front</h4>
+<div class="paragraph">
+<p>We implemented a processor <strong>jq-front</strong><a href="#jq-front">[16]</a>, that converts data written in JSON++ into plain JSON.
+We named this tool after a pre-processor that converts C++ source code into plain C source code, <strong>Cfront</strong><a href="#Cfront">[17]</a>.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="diag-ditaa-md5-1f595a8c75ae48071354bf1fb7eaa825.png" alt="Diagram" width="760" height="406"/>
+</div>
+</div>
+<div class="paragraph">
+<p>It consists of a couple of moules, which are <strong>Inheritance Resolution</strong> and <strong>Interpolation Handling</strong>.
+As their names suggest, once a source file is given to the tool, <strong>Inheritance Resolution</strong> module processes it to resolve inheritances defined in the source.
+Then its output is passed to the <strong>Interpolation Handling</strong> module.
+Each of them has its own internal pipelines.
+In this section, we will be looking into them one by one.</p>
+</div>
+<div class="paragraph">
+<p>For the sake of the discussion, we assume we have the following files in the current working directory.</p>
+</div>
+<div class="listingblock">
+<div class="title">source.json++</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "$extends": [ "base.json++" ],
+  "$local": {
+    "A": {
+      "eval:$(echo -n Hello)": "eval:string:$(ref .test.k)"
+    }
+  },
+  "test": {
+    "$extends": [
+      "A"
+    ],
+    "k": "hello"
+  }
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">base.json++</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "base": "world"
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_inheritance_mechanism">Inheritance Mechanism</h4>
+<div class="paragraph">
+<p><strong>Inheritance Resolution</strong> is divided into three parts as in all.
+One is "file level inheritance handling", another is "local node materialization", and the third is "node level inheritance".
+Each of them is designed to serve for different responsibilities.</p>
+</div>
+<div id="inheritance" class="imageblock">
+<div class="content">
+<img src="diag-ditaa-md5-a0aa20f0598c8b3911fc46535bfe7c35.png" alt="Diagram" width="920" height="406"/>
+</div>
+<div class="title">Figure 2. Inheritance Mechanism</div>
+</div>
+<div class="paragraph">
+<p>In this working example, only one file is specified in the <code>$extends</code> directive.
+When more than one files are specified, and they are extending other files, the inheritance resolution will happen in a manner of "width-first" way.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">File Level Inheritance</dt>
+<dd>
+<p>In the file level inheritance resolution, it reads a given source file, and it traces the files on <code>JF_PATH</code> environment variable.
+Through this process, a file <strong>Work (1)</strong> in the Figure <a href="#inheritance">Inheritance Mechanism</a>, will be generated and its content will be as follows.</p>
+</dd>
+</dl>
+</div>
+<div class="listingblock">
+<div class="title">Content of a temporary file: "Work (1)"</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "$local": {
+    "A": {
+      "eval:$(echo -n Key)": "eval:string:$(ref .test.k)"
+    }
+  },
+  "test": {
+    "$extends": [
+      "A"
+    ],
+    "k": "hello"
+  },
+  "base": "world"
+}</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Local Node Materialization</dt>
+<dd>
+<p>A "local node" is a concept to use "inheritances" without creating files outside a source file.
+In the given source file, there is a node <code>$local</code>, under which an entry <code>"A": { "key": "…​" }</code> is defined.
+This generates a file whose name is <code>A</code> under a temporary directory, which is a part of <code>JF_PATH</code> environment variable.
+Thus, exactly the same syntax and behavior is available, when a data designer places <code>$extends: ["A"]</code> somewhere in the source file.</p>
+</dd>
+</dl>
+</div>
+<div class="listingblock">
+<div class="title">The content of file "A"</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "eval:$(echo -n Key)": "eval:string:$(ref .test.k)"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>ref</code> is a built-in function of the processor, and it prints a value of a node specified by an argument passed to it.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Node Level Inheritance</dt>
+<dd>
+<p>A node <code>.test</code> has <code>$extends</code> directive in it.
+Its value is an array whose only element is <code>A</code>.
+It extends the content of <code>A</code>, whose content was seen earlier in this section.
+After this inheritance is processed, the output of this step (Work (2 a)) will look like as follows.</p>
+</dd>
+</dl>
+</div>
+<div class="listingblock">
+<div class="title">Content of a temporary file: "Work (2 a)"</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "test": {
+    "eval:$(echo -n Key)": "eval:string:$(ref .test.k)",
+    "k": "hello"
+  },
+  "base": "world"
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_interpolation_mechanism">Interpolation Mechanism</h4>
+<div class="paragraph">
+<p>After inheritances are processed, "interpolation" mechanism will be executed.
+This stage consists of two steps, which are "key-side" processing and "value-side" processing.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="diag-ditaa-md5-06db064896e78d0d1af94f76504c7f33.png" alt="Diagram" width="930" height="518"/>
+</div>
+<div class="title">Figure 3. Interpolation Mechanism</div>
+</div>
+<div class="paragraph">
+<p>In these steps, string values which start with <code>eval:</code> will be replaced with the value computed from the string right next to it.
+That is, if you have a string value:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>"key": "eval:string:$(echo 'Hello') world"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The part <code>string:</code> specifies the type of the node after interpolation happened.
+You can specify one of <code>string</code>, <code>number</code>, <code>bool</code>, <code>array</code>, and <code>object</code>.
+Otherwise, it will be treated as <code>string</code>.
+The part <code>$(echo 'Hello')</code> will be evaluated and embedded at the JSON path, instead of the original string, which will result in <sup class="footnote" id="_footnote_rawKeyword">[<a id="_footnoteref_2" class="footnote" href="#_footnotedef_2" title="View footnote.">2</a>]</sup>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>"key": "Hello world"</pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Key-side processing</dt>
+<dd>
+<p>As the name suggests, this step processes the keys starting with <code>eval:</code>.
+After this process is performed, the file will like as follows:</p>
+</dd>
+</dl>
+</div>
+<div class="listingblock">
+<div class="title">Content of File: <code>Work(2 b)</code></div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "test": {
+    "k": "hello",
+    "Hello": "eval:$(ref .test.k)"
+  },
+  "base": "world"
+}</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Value-side processing</dt>
+<dd>
+<p>This step performs the string value interpolation the same as <strong>Key-side processing</strong>, but for values of JSON object.</p>
+</dd>
+</dl>
+</div>
+<div class="listingblock">
+<div class="title">Content of Output</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "test": {
+    "k": "hello",
+    "Hello": "hello"
+  },
+  "base": "world"
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_built_in_functions">Built-in functions</h4>
+<div class="paragraph">
+<p>In addition to commands and functions visible to a bash shell on which <code>jq-front</code> runs, you can use functions listed in this section.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>ref</code> function</dt>
+<dd>
+<p>A function that returns a value of a node specified by an argument.
+This function can only work from inside "Work(2)" file.
+In case this function references a text node that starts with <code>eval:</code>, it performs templating on the node.
+This means, the <code>ref</code> function may be applied recursively.
+In case cyclic reference is found during this process, it will be reported and the process will be aborted.</p>
+</dd>
+<dt class="hdlist1"><code>curn</code> function</dt>
+<dd>
+<p>A function that returns a path to the node that makes a call to this function.</p>
+</dd>
+<dt class="hdlist1"><code>parent</code> function</dt>
+<dd>
+<p>A function that prints a path to a parent node of a given path.</p>
+</dd>
+<dt class="hdlist1"><code>error</code> function</dt>
+<dd>
+<p>A function that prints a given error message and returns with a non-zero value.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_user_defined_functions">User defined functions</h4>
+<div class="paragraph">
+<p>You can define your own function for the templating stage by following syntax.
+First, you can create a file that contains definitions of your functions.</p>
+</div>
+<div class="listingblock">
+<div class="title">SS.sh</div>
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">function hello_world() {
+  echo "Hello, world. My Function!"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Next you reference the file inside the <code>$extends</code> syntax.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "$extends": [
+    "SS.sh;SOURCE"
+  ],
+  "key": "eval:string:hello_world=$(hello_world),$(echo HELLO)"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The string <code>SOURCE</code> is the keyword that tells <code>jq-front</code> to import the file.
+And as you see, you are now able to call the function you defined, <code>hello_world</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "key": "hello_world=Hello, world. My Function!,HELLO"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The file will be rendered as you see above.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_pipelined_approach">Pipelined Approach</h3>
+<div class="paragraph">
+<p>Conventional approaches in <a href="#background">Background and Related Work</a> section do not identify readability for humans and that for machines as independent concerns.
+They process configuration files in a monolithic single step Fig. <a href="#monolithic">1</a>.</p>
+</div>
+<div id="monolithic" class="listingblock">
+<div class="title">Conventional Monolithic Approach</div>
+<div class="content">
+<pre>Failed to generate image: Could not find the 'mmdc' executable in PATH; add it to the PATH or specify its location using the 'mmdc' document attribute
+graph LR
+    App((Application))    --&gt;|read| AppData[A: Custom Representation]
+    App --&gt;|Parse Input, Process Inheritances and Interpolatiopns, and Perform Business Logic| App</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>An application reads configuration files, resolves references and inheritances, and it interprets their contents based on application-specific semantics.
+Based on the interpreted information, it performs required operations.
+These are executed as a single and indivisible action.</p>
+</div>
+<div class="paragraph">
+<p>Instead, the approach we are proposing separates these concerns independent and executable one by one.</p>
+</div>
+<div id="pipelinedApproach" class="imageblock text-center">
+<div class="content">
+<img src="images/figure-2.svg" alt="mermaid"/>
+</div>
+<div class="title">Figure 4. Proposed "Pipelined" Approach</div>
+</div>
+<div class="paragraph">
+<p>In the Figure <a href="#pipelinedApproach">5.</a>, it is assumed that the application uses <strong>YAML</strong> or <strong>HCL</strong>, which are supersets of <strong>JSON</strong>.
+If the application uses a notation which is not a superset of <strong>JSON</strong>, it needs to be converted back to the original one.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="results">Results</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this section, we will apply our method to a few existing software products;
+<strong>pyproject</strong>, <strong>Cucumber</strong>, and <strong>commandunit</strong>, each of uses <strong>TOML</strong>, <strong>Gherkin</strong>, and <strong>YAML</strong>.</p>
+</div>
+<div class="sect2">
+<h3 id="_pyproject_toml"><code>pyproject.toml</code></h3>
+<details>
+<summary class="title">Details</summary>
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-toml" data-lang="toml">[tool.poetry]
+name = "my_project"
+version = "0.1.0"
+description = "An example project showing pyproject.toml redundancy"
+authors = ["Your Name &lt;you@example.com&gt;"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.25.1"
+
+[tool.poetry.dev-dependencies]
+black = "^22.3.0"
+isort = "^5.10.1"
+mypy = "^0.910"
+
+[build-system]
+requires = ["poetry-core&gt;=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# Repetition in tool-specific configurations
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_third_party = ["requests"]
+
+[tool.mypy]
+python_version = 3.8
+ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["my_project"]
+
+[tool.coverage.report]
+fail_under = 80
+omit = [
+    "tests/*",
+]
+
+[tool.flake8]
+max-line-length = 88
+ignore = ["E203", "W503"]</code></pre>
+</div>
+</div>
+</div>
+</details>
+</div>
+<div class="sect2">
+<h3 id="_commandunit"><code>commandunit</code></h3>
+<div class="paragraph">
+<p>The tool <strong>commandunit</strong> is designed for integration tests for commandline programs.
+It allows users to write tests in given-when-then style using YAML.</p>
+</div>
+<details>
+<summary class="title">Details</summary>
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">#file: noinspection YAMLIncompatibleTypes
+---
+type: NORMAL
+description: []
+given:
+  description:
+  - This step should always be executed.
+  stdin: []
+  shell:
+    name: bash
+    options:
+    - "-eu"
+    - "-E"
+  source: []
+  environmentVariables:
+    COMMANDUNIT_DEPENDENCIES_ROOT: _{COMMANDUNIT_BUILTIN_ROOT}
+    COMMANDUNIT_BUILTIN_ROOT: _{COMMANDUNIT_DEPENDENCIES_ROOT}x
+  cmd: ":"
+  args: []
+when:
+  description: []
+  stdin: []
+  shell:
+    name: bash
+    options:
+    - "-eu"
+    - "-E"
+  source:
+  - "${COMMANDUNIT_BUILTIN_ROOT}/bud/lib/core.rc"
+  - "${SCRIPTS_DIR}/target_lib.rc"
+  environmentVariables:
+    COMMANDUNIT_DEPENDENCIES_ROOT: _{COMMANDUNIT_BUILTIN_ROOT}
+    COMMANDUNIT_BUILTIN_ROOT: _{COMMANDUNIT_DEPENDENCIES_ROOT}
+    SCRIPTS_DIR: "${COMMANDUNIT_PROJECT_DIR}/src/main/scripts"
+  cmd: cat
+  args:
+  - "${SCRIPTS_DIR}/hello.txt"
+then:
+  description: []
+  exitCode:
+  - EQUAL
+  - 0
+  stdout:
+    present:
+    - REGEX:Hello world
+    absent: []
+  stderr:
+    present: []
+    absent:
+    - REGEX:.+</code></pre>
+</div>
+</div>
+</div>
+</details>
+<div class="paragraph">
+<p>However, quite a few elements are repeated, and they should be defined for a test suite, not for individual test cases.
+If we extract such items in a separate file, <code>core/base.json</code>, the test case will look like as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">#file: noinspection YAMLIncompatibleTypes
+---
+"$extends":
+  - core/base.json
+when:
+  environmentVariables:
+    SCRIPTS_DIR: "${COMMANDUNIT_PROJECT_DIR}/src/main/scripts"
+  source:
+    - ${COMMANDUNIT_BUILTIN_ROOT}/bud/lib/core.rc
+    - ${SCRIPTS_DIR}/target_lib.rc
+  cmd: cat
+  args:
+    - ${SCRIPTS_DIR}/hello.txt
+then:
+  exitCode:
+    - EQUAL
+    - 0
+  stdout:
+    present:
+      - REGEX:Hello world
+  stderr:
+    absent:
+      - REGEX:.+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Following is the <code>core/base.json</code> files that should be shared across test cases in the same test suite.</p>
+</div>
+<details>
+<summary class="title">Details</summary>
+<div class="content">
+<div class="listingblock">
+<div class="title"><code>base/normal.json</code></div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "type": "NORMAL",
+  "description": [
+  ],
+  "given": {
+    "description": [
+      "This step should always be executed."
+    ],
+    "stdin": [
+    ],
+    "shell": {
+      "name": "bash",
+      "options": [
+        "-eu",
+        "-E"
+      ]
+    },
+    "source": [
+    ],
+    "environmentVariables": {
+      "COMMANDUNIT_DEPENDENCIES_ROOT": "eval:string:${COMMANDUNIT_BUILTIN_ROOT}",
+      "COMMANDUNIT_BUILTIN_ROOT": "eval:string:${COMMANDUNIT_DEPENDENCIES_ROOT}x"
+    },
+    "cmd": ":",
+    "args": [
+    ]
+  },
+  "when": {
+    "description": [
+    ],
+    "stdin": [
+    ],
+    "shell": {
+      "name": "bash",
+      "options": [
+        "-eu",
+        "-E"
+      ]
+    },
+    "source": [
+    ],
+    "environmentVariables": {
+      "COMMANDUNIT_DEPENDENCIES_ROOT": "eval:string:_{COMMANDUNIT_BUILTIN_ROOT}",
+      "COMMANDUNIT_BUILTIN_ROOT": "eval:string:_{COMMANDUNIT_DEPENDENCIES_ROOT}"
+    },
+    "cmd": "eval:string:$(error 'missing attribute!')",
+    "args": [
+    ]
+  },
+  "then": {
+    "description": [
+    ],
+    "exitCode": [
+      "EQUAL",
+      0
+    ],
+    "stdout": {
+      "present": [
+      ],
+      "absent": [
+      ]
+    },
+    "stderr": {
+      "present": [
+      ],
+      "absent": [
+      ]
+    }
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</details>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">NOTE</dt>
+<dd>
+<p>This approach doesn’t require IDE support for JSON++ as it is just a subset of JSON.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="discussion">Discussion</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>this approach allows us to keep using the already existing tool supports, such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.
+For application developers, it is also beneficial because burdens to simplify their configuration notations will be removed.
+Users will be able to take care of it by themselves using inheritances and reusable node value computations.
+Only in case they want to uniform how such configurations should be written across their users, they can bundle standard <strong>JSON++</strong> files which define reasonable default values and reusable logics for the default values of their product.</p>
+</div>
+<div class="sect2">
+<h3 id="_interpretation_of_results">Interpretation of Results</h3>
+<div class="paragraph">
+<p>(t.b.d.)</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_implications">Implications</h3>
+<div class="paragraph">
+<p>(t.b.d.)</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_limitations">Limitations</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Features beyond JSON</dt>
+<dd>
+<p>In case a notation has a feature, which cannot be represented in <strong>JSON</strong>, this approach requires extra treatment.
+For example, <strong>YAML</strong> allows to define entries with the same key multiple times, which is not valid in <strong>JSON</strong>.
+In such cases, we will need to introduce a convention that interprets it into <strong>JSON</strong>, and converts it back to <strong>YAML</strong>, safely.</p>
+</dd>
+<dt class="hdlist1">Application-level Syntax-sugars</dt>
+<dd>
+<p>An application sometimes defines its own syntax on top of its data notation for user’s convenience.
+We expect such a syntax to be simplified and uniformed by applying our approach.
+However, this benefit was not examined in this study.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="conclusion">Conclusion</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In the software industry, various notations (<strong>YAML</strong>, <strong>TOML</strong>, <strong>HOCON</strong>, <strong>HCL</strong>, …​) have been developed and used in order to describe structured information with complex constraints.
+These notations have their own philosophies about "readability".
+Some of them have features to reduce redundancies by reusing node values within a file.
+Such features have been implemented as a feature of an application.
+However, these features are more or less similar to each others, and therefore, similar functionalities have implemented by parsers of different notations and applications repeatedly.
+To address this situation, we proposed a new approach, where in this article:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Readability for humans and readability for machines are clearly separated as independent concerns.</p>
+</li>
+<li>
+<p>Readability for humans are left to individual notations.
+This layer is called "human-aware notation"</p>
+</li>
+<li>
+<p>Introduce "human-aware notation" agnostic syntax to model inheritances and node-value computation inside <strong>JSON</strong> level.
+This enhanced <strong>JSON</strong> syntax is called <strong>JSON++</strong>.</p>
+</li>
+<li>
+<p>Pipeline stages, one of which converts data from "human-aware notation" to <strong>JSON</strong>, another processes <strong>JSON++</strong> to plain-<strong>JSON</strong>, and then the processed <strong>JSON</strong> converted back to the original format to be passed to the original tool.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>This approach delivered benefits to application users, where experiences across applications are uniformed and efforts to learn new application’s syntax are reduced.</p>
+</div>
+<div class="paragraph">
+<p>For application developers, it is also beneficial because burdens to implement syntax sugars for their configuration notations will be removed because it will be a user side concern.
+This approach allows us to keep using the already existing tool supports,
+such as syntax highlighting plugins, refactoring feature of editors, CLI tools to manipulate the data, and other utilities.</p>
+</div>
+<div class="sect2">
+<h3 id="_future_works">Future Works</h3>
+<div class="paragraph">
+<p>A fituFig. <a href="#technique">Technique</a> section, we discussed "Pipelined approach".
+If we further apply this approach to a broader scope, we can think of an ecosystem,
+where applications concentrate on their business logics,
+while notations concentrate on their human-readability in their contexts.</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="images/figure-3.svg" alt="figure 3"/>
+</div>
+<div class="title">Figure 5. "Ideal World" to be delivered by JSON++</div>
+</div>
+<div class="paragraph">
+<p>That is, as <strong>HCL</strong> is a notation for describing configurations of distributed systems,
+it should focus on human-readability for such system’s deployments.
+Features such as referencing values of other nodes, defining a new node from existing other nodes, and maintaining consistency among values of nodes, should be left to <strong>JSON</strong>-level processor, such as <strong>jq-front</strong>.</p>
+</div>
+<div class="paragraph">
+<p>To achieve such an eco-system, authors think following features will keys:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Faster Implementation of the Processor</dt>
+<dd>
+<p>Right now, <strong>jq-front</strong> is implemented as a <strong>bash</strong> script.
+While this resulted in a simple design, the performance overhead is not negligible.
+Implementation in faster languages such as <strong>Java</strong>, <strong>Golang</strong>, <strong>Rust</strong>, or whatever else is desired.</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>Refining finer details such as semantics on multiple inheritances.
+That is, what should happen when different types of nodes are found at the same JSON path location.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_references">References</h2>
+<div class="sectionbody">
+<div class="ulist bibliography">
+<ul class="bibliography">
+<li>
+<p><a id="diagrams"/>[0] <a href="https://docs.google.com/presentation/d/1lVF6P2Ypzk11JO3rv1d0s6CmRGbjNJapnJuxtJqVnYo/edit#slide=id.p">diagrams</a></p>
+</li>
+<li>
+<p><a id="docker"/>[1] <a href="https://www.docker.com/">Develop faster. Run anywhere.</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="k8s"/>[2] <a href="https://kubernetes.io/">Kubernetes: Production-Grade Container Orchestration</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="helm"/>[3] <a href="https://helm.sh/">HELM: The package package manager for Kubernetes</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="kustomize"/>[4] <a href="https://kustomize.io/">Kubernetes native configuration management</a>, Seen Nov/20/2024</p>
+</li>
+<li>
+<p><a id="docker-compose"/>[5] <a href="https://docs.docker.com/compose/">Docker Compose</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="terraform"/>[6] <a href="https://www.terraform.io/">Automate infrastructure on any cloud with Terraform</a>, Seen Nov/20/2024</p>
+</li>
+<li>
+<p><a id="runn"/>[7] <a href="https://github.com/k1LoW/runn/blob/main/examples/cdp.yml">runn</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="commandunit"/>[8] <a href="https://github.com/dakusui/commandunit">commandunit</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="yaml"/>[9] <a href="https://yaml.org/">YAML</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="cucumber"/>[10] <a href="https://cucumber.io/docs/">cucumber</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="gherkin"/>[11] <a href="https://cucumber.io/docs/gherkin/">gherkin</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="pyproject"/>[12] <a href="https://packaging.python.org/en/latest/guides/writing-pyproject-toml/">Writing your <code>pyproject.toml</code></a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="hugo"/>[13] <a href="https://gohugo.io/">HUGO: The world’s fastest framework for building websites</a>, Seen Nov/20/2024</p>
+</li>
+<li>
+<p><a id="dry"/>[14] Hunt, Andrew, Thomas, David (1999).</p>
+</li>
+<li>
+<p><a id="toml"/>[15] <a href="https://toml.io/en/">TOML: Tom’s Obvious Minimal Language</a>, Seen Nov/20/2024.</p>
+</li>
+<li>
+<p><a id="jq-front"/>[16] jq-front project in github.org. <a href="https://github.com/dakusui/jq-front">jq-front</a>:
+2019</p>
+</li>
+<li>
+<p><a id="Cfront"/>[17] Cfront article in Wiki[edia <a href="https://en.wikipedia.org/wiki/Cfront" class="bare">https://en.wikipedia.org/wiki/Cfront</a>
+The Pragmatic Programmer : From Journeyman to Master (the first edition).
+US: Addison-Wesley. pp. 320. ISBN 978–0201616224</p>
+</li>
+<li>
+<p><a id="hocon"/>[18] HOCON (Human-Optimized Config Object Notation), <a href="https://github.com/lightbend/config">HOCON</a>, 2020</p>
+</li>
+<li>
+<p><a id="handlebars"/>[19] handlebars <a href="https://handlebarsjs.com/">Minimal templating on steroids</a></p>
+</li>
+<li>
+<p><a id="mustache"/>[20] Mustache <a href="https://mustache.github.io">{{logicless template}}</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="appendix">Appendix</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="built-in">Built-in Functions</h3>
+<div class="paragraph">
+<p>In addition to commands and functions visible to a bash shell on which <code>jq-front</code> runs, you can use functions listed in this section.</p>
+</div>
+<div class="sect3">
+<h4 id="_ref_function"><code>ref</code> function</h4>
+<div class="paragraph">
+<p>A function that returns a value of a node specified by an argument.
+This function can only work from inside "Work(2)" file.</p>
+</div>
+<div class="paragraph">
+<p>In case this function references a text node that starts with <code>eval:</code>, it performs templating on the node.
+This means, the <code>ref</code> function may be applied recursively.
+In case cyclic reference is found during this process, it will be reported and the process will be aborted.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>parameter:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>_path</code>: path to a node in the file "Work(2)"</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>returned value (stdout):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>A value of a node specified by <code>_path</code></p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="sect4">
+<h5 id="_examples">Examples</h5>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;"/>
+<col style="width: 50%;"/>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Input</th>
+<th class="tableblock halign-left valign-top">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="title">A.json</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": {
+       "c": "hello"
+    }
+  },
+  "r": "eval:string:$(ref .a.b.c), world"
+}</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": {
+       "c": "hello"
+    }
+  },
+  "r": "hello, world"
+}</code></pre>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="title">B.JSON</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "$extends": ["A.json"],
+  "r": "eval:string:$(ref .a.b.c), world"
+}</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": {
+       "c": "hello"
+    }
+  },
+  "r": "hello, world"
+}</code></pre>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="title">C.JSON</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "$extends": ["A.json"],
+  "r": "eval:object:$(ref .a.b)"
+}</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": {
+       "c": "hello"
+    }
+  },
+  "r": {
+    "c": "hello"
+  }
+}</code></pre>
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_self_function"><code>self</code> function</h4>
+<div class="paragraph">
+<p>A function that prints the entire file content before templating.
+This function is intended for internal use.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>parameter: (none)</p>
+</li>
+<li>
+<p>returned value (stdout):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Content of the processed file before any templating happens.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_curn_function"><code>curn</code> function</h4>
+<div class="paragraph">
+<p>A function that returns a path to the node that makes a call to this function.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>parameter: (none)</p>
+</li>
+<li>
+<p>returned value (stdout):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>A path to the string node that makes the call to this function.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="sect4">
+<h5 id="_examples_2">Examples</h5>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;"/>
+<col style="width: 50%;"/>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Input</th>
+<th class="tableblock halign-left valign-top">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="title">A.json</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": [
+       "eval:$(curn)"
+    ]
+  }
+}</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": [
+       ".a.b[0]"
+    ]
+  }
+}</code></pre>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="title">A.json</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": {
+       "c": "eval:$(cur)"
+    }
+  }
+}</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": {
+       "c": ".a.b.c"
+    }
+  }
+}</code></pre>
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+The actual outputs of this function are escaped.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_cur_function"><code>cur</code> function</h4>
+<div class="paragraph">
+<p>A function that returns a path to a container node to which the current "entry" belongs.
+An "entry" means a string element in an array or a pair of key and value in an object.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>parameter: (none)</p>
+</li>
+<li>
+<p>returned value (stdout):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>A path to the container the node belongs to</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="sect4">
+<h5 id="_examples_3">Examples</h5>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;"/>
+<col style="width: 50%;"/>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Input</th>
+<th class="tableblock halign-left valign-top">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="title">A.json</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": [
+       "eval:$(cur)"
+    ]
+  }
+}</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": [
+       ".a.b"
+    ]
+  }
+}</code></pre>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="title">A.json</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": {
+       "c": "eval:$(cur)"
+    }
+  }
+}</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "a": {
+    "b": {
+       "c": ".a.b"
+    }
+  }
+}</code></pre>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="title">X.JSON</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "x": {
+    "$extends": ["A.json"]
+  }
+}</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "x": {
+    "a": {
+      "b": {
+         "c": ".x.a.b"
+      }
+    }
+  }
+}</code></pre>
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+Notice that jq-front first expands all the inheritances in the input and then invokes the 'templating' mechanism.
+Thus, <code>cur</code> function calls in inherited files are evaluated based on paths where they appear in the expanded file.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_parent_function"><code>parent</code> function</h4>
+<div class="paragraph">
+<p>A function that prints a path to a parent node of a given path.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>parameter:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>A path to a node</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>returned value (stdout):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>A path to a parent of the node.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="sect4">
+<h5 id="_examples_4">Examples</h5>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;"/>
+<col style="width: 50%;"/>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Input</th>
+<th class="tableblock halign-left valign-top">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">"eval:$(parent .hello.world)"</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">".hello"</code></pre>
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_error_function"><code>error</code> function</h4>
+<div class="paragraph">
+<p>A function that prints a given error message and returns a non-zero value.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>parameter:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>An error message</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>returned value:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>stdout</p>
+<div class="ulist">
+<ul>
+<li>
+<p>(none)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>sterr</p>
+<div class="ulist">
+<ul>
+<li>
+<p>A string starts with <code><code>ERROR: {given error message}</code></code>.
+A stack trace follows it.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>exit code</p>
+<div class="ulist">
+<ul>
+<li>
+<p>A non-zero value.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+If you nest a call to a function or command that fails by another using a command substitution of <code>bash</code>, the next call will not be aborted immediately, in general.
+That is, <code><code>"eval:$(echo $(cat missing-file))-$(echo hello)"</code></code> will result in <code>-hello</code>.
+This is a behaviour of <code>bash</code> and its command substitution.
+However, if you use this function, <code><code>"eval:$(echo $(cat missing-file || error 'something went wrong'))-$(echo hello)"</code></code>, <code>jq-front</code> will abort the process after evaluating this string because it finds a keyword <code><code>ERROR: </code></code> in the stderr.
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+Functions discussed in this section check whether <code>$?</code> is zero at the beginning.
+If it is not zero, the function will abort and the string evaluation will be aborted in general.
+However, a user is still able to nest the call with another function that not necessarily performs such a check.
+In this case, the evaluation will not stop at the point and <code>jq-front</code> will abort the rest of its execution after handling the string since it will find the <code><code>ERROR: </code></code> keyword.
+</td>
+</tr>
+</table>
+</div>
+<div class="sect4">
+<h5 id="_examples_5">Examples</h5>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;"/>
+<col style="width: 50%;"/>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Input</th>
+<th class="tableblock halign-left valign-top">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">"eval:$(error hello)"</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-console" data-lang="console">ERROR: hello
+  at 36 abort /home/who/Documents/jq-front/lib/shared.sh
+  at 439 _check_cyclic_dependency /home/who/Documents/jq-front/jq-front
+  at 111 _expand_nodelevel_inheritances /home/who/Documents/jq-front/jq-front
+...</code></pre>
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph text-right"><p>
+<a href="allYouNeed.html">open this page in a window</a>
+</p></div>
 </div>
 <div id="design" class="tabcontent">
 <div id="design_content">

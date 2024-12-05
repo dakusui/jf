@@ -3,44 +3,45 @@
 [[technique]]
 == Technique
 
-As stated in the <<background>> section, the industry has tried to address similar problems via different approaches.
+As stated in the <<background>> section, the industry has been trying to address similar problems via different approaches.
 
 In order to improve human-readability, where visual structure on an editor screen, resemblance with existing formats, or number of lines and tokens matter more, various notations have been introduced, such as **YAML**, **TOML**, **HCL**, or **HOCON**.
+They use indentations, blocks with braces, or tags in brackets to show data structure visually to humans.
+Also, some of them allow omitting punctuations in data, where possible.
 
-Some of these notations have features to make texts less redundant as much as possible.
+Some of these notations have features to data texts less redundant as much as possible by implementing feature to define nodes based on others.
 For instance, **YAML** allows a node to "inherit" another in the same file.
 **HOCON** and **HCL** have features to reference other nodes' values to define a value of a node on top of inheritances.
-Such features are sometimes implemented as a part of application programs.
-Without these features, users will need to define the same values and structures multiple times, which is error-prone and causes poor user-experiences.
+Such features are also sometimes implemented as a part of application programs.
+Without these features, users will need to define the same values and structures multiple times, which is error-prone and causes poor user experiences.
 In this article, we refer to such features **syntax sugars**, which are improving "machine-readability" as it helps keep notation processors of applications simple.
 
 However, in this situation, where each notation and application has its own syntax sugars, user-experiences across applications are already damaged.
 Because the learning costs of a notation will be expensive, behaviors of similar features will be not consistent and subtly different.
 
-In this section, we will discuss a novel processing pipeline, where human-readability and machine-readability are addressed as separate concerns.
+In this section, we will discuss a novel processing pipeline, where human-readability and machine-readability are both addressed as separate concerns.
 To achieve this approach, we have created a tool called **jq-front**<<jq-front>> and a pipeline that employs it.
 
 This approach enables a single uniformed yet sufficiently powerful set of syntax sugars and various human-readable notations at the same time in a consistent manner.
-This will further deliver evolutions in human- and machine- readability of application data notations.
 
 We can think of another approach to employ templating engines such as Handlebars<<handlebars>> and Mustache<<mustache>>.
 However, it will create other challenges because it makes template files invalid in original notations.
 The benefits and limitations of the approach will be discussed in the <<discussion>> section compared with ours.
 
-=== Separation of Concerns: Readability for Human and Machines
+=== Separation of Concerns: Readability for Humans and Machines
 
 In our approach, we identify the human readability and the capability to make the descriptions of structured information with complex constraints "D-R-Y"ed are completely independent concerns.
 
-Being able to reduce repetitions might improve the human-readability as a result, still it is different from the readability improvement delivered by **YAML**, **TOML**, **HCL**, and others, where visual structures are more understandable and concise for human.
+Being able to reduce repetitions might improve human readability as a result, still it is different from the readability improvement delivered by **YAML**, **TOML**, **HCL**, and others, where visual structures are more understandable and concise for humans.
 
 === New Notation: JSON{plus}{plus} and its processor **`jq-front`**
 
-Through examining various notations, authors realized that the functionalities designed and implemented over and over again at the every corner of the industry are essentially:
+Through examining various notations, authors realized the functionalities designed and implemented over and over again in every corner of the industry are:
 
-* Inheritances
-* Computations of node values
+* Inheritances of nodes
+* Computations of node values from other nodes
 
-Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, and others are designed to be "superset" of **JSON** or tools to convert them into **JSON** are available.
+Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, and others are designed to be "superset" of **JSON** or tools to convert them into **JSON** are widely available.
 
 *JSON{plus}{plus}* is a notation to implement the features but within the syntax of **JSON** by introducing a few keywords that have special semantics.
 
@@ -267,7 +268,7 @@ You can specify one of `string`, `number`, `bool`, `array`, and `object`.
 Otherwise, it will be treated as `string`.
 The part `$(echo 'Hello')` will be evaluated and embedded at the JSON path, instead of the original string, which will result in footnote:rawKeyword[To "escape" a string starting with `eval:`, you can use `raw:` keyword.
 With it, you can describe such a string as:
-`"eval:string:$(echo 'Hello') world"`.]:
+`"raw:eval:string:$(echo 'Hello') world"`.]:
 
 ----
 "key": "Hello world"

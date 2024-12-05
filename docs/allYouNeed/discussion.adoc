@@ -9,6 +9,10 @@ For application developers, it is also beneficial because burdens to simplify th
 Users will be able to take care of it by themselves using inheritances and reusable node value computations.
 Only in case they want to uniform how such configurations should be written across their users, they can bundle standard **JSON{plus}{plus}** files which define reasonable default values and reusable logics for the default values of their product.
 
+// NOTE
+
+Comparison with templating engine approach
+
 === Interpretation of Results
 
 (t.b.d.)
@@ -16,6 +20,9 @@ Only in case they want to uniform how such configurations should be written acro
 === Implications
 
 (t.b.d.)
+
+NOTE:: This will further deliver evolutions in human- and machine- readability of application data notations.
+
 
 === Limitations
 

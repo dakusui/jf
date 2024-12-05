@@ -32,7 +32,7 @@ where applications concentrate on their business logics,
 while notations concentrate on their human-readability in their contexts.
 
 ."Ideal World" to be delivered by JSON++
-image::images/figure-3.svg[align="center"]
+image::./images/figure-3.svg[align="center"]
 
 That is, as **HCL** is a notation for describing configurations of distributed systems,
 it should focus on human-readability for such system's deployments.
