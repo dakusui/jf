@@ -9,12 +9,13 @@ This is a situation found especially frequent in configuration files of distribu
 In distributed system management, there are tools to manage instances under **docker**<<docker>> and **Kubernetes**<<k8s>>.
 Most of them use **YAML**<<kustomize>><<helm>><<docker-compose>>, but **Terraform**<<terraform>> uses its own notation; **HCL**.
 Not only that, in testing field, **runn**<<runn>> and **commandunit**<<commandunit>> use **YAML**<<yaml>>, while **Cucumber**<<cucumber>> uses **Gherkin**<<gherkin>>.
-Another notation is **TOML**, which is used for building python projects<<pyproject>>, widely used for python projects, but not limited to.
-For instance, configuring blog system<<hugo>>.
+Another notation is **TOML**, which is used for building python projects<<pyproject>>, widely used for python projects and others.
+For instance, it is used for configuring blog system<<hugo>>.
 
 In short, currently, various applications use various notations to define their own DSLs for system configurations, tests, or product management.
-However, they share common concerns and keep addressing similar problems repetitively, which is inefficient, error-prone, and raising learning costs for users.
-This is a situation violating principle in the UNIX philosophy: "Make each program do one thing well" and "Don't repeat yourself".
+However, they share common concerns and keep addressing similar problems repetitively in slightly different their own ways.
+As a result, not only their developments are made inefficient, bug-prone, but also it is raising learning costs and making experiences poor for users.
+This is a situation caused by violating principle in the UNIX philosophy: "Make each program do one thing well" and "Don't repeat yourself".
 
 **Proposed Method:**  We propose a new method, which is designed based on the following ideas:
 
@@ -23,7 +24,8 @@ This is a situation violating principle in the UNIX philosophy: "Make each progr
 2. Introduce notation neutral syntax to express data concisely.
 The syntax is designed to be surjective from one notation to itself.
 It has a few keywords to enable inheritances and computations of node values from others.
-Given a notation *N*, a new notation enhanced by the syntax will be called **N{plus}{plus}**
+Given a notation *N*, a new notation enhanced by the syntax will be called **N{plus}{plus}**.
+Note that it still conforms the syntax of **N**.
 In general, each well-known notation can be converted into/back from **JSON**<<json>>.
 This means once we implement **N{plus}{plus}** processor for **JSON**, it can be used for all these notations mentioned above just by employing it as a stage in a pipeline.
 We call **N{plus}{plus}** for **JSON** as "**JSON{plus}{plus}**", and documents written in it **JSON{plus}{plus}** documents in this article.
@@ -39,9 +41,9 @@ It will also be discussed how and when proposed approach becomes beneficial comp
 
 **Contributions:** This paper makes the following contributions:
 
-- A Novel Architecture: t.b.d.
-- Empirical Validation: t.b.d. style example: We demonstrate the effectiveness of our model on machine translation tasks, achieving state-of-the-art performance on the WMT 2014 English-to-German dataset.
-- Generalizability: t.b.d. style example: We show that the Transformer architecture generalizes well to other sequence modeling tasks, including text summarization and question answering.
+- Novel Architecture: We propose a pipeline architecture, where machine readability and human readability are independent of each other.
+- Empirical Validation: We demonstrate the effectiveness of our approach on a couple of existing tools.
+- Generalizability: As the syntax the approach introduces is notation neutral, it can be applied to notations and applications that use them, which can be converted to and back from *JSON*
 
 
 The rest of this paper is organized as follows:

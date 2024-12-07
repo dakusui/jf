@@ -5,7 +5,7 @@
 = JSON++ is All You Need
 
 **Abstract:** In various areas of software development, to describe information with complex structures and constraints, a number of similar but different notations have been proposed and used.
-This is especially frequent in configurations of distributed systems and testings.
+This is especially frequent in testings and configurations of distributed systems.
 These notations and software products have different syntaxes and no direct compatibility.
 Because of that, learning and development costs have been more expensive than it can be.
 In this article, we strictly identify a notation's human-readability and capability to make documents essential and concise are separate concerns.
