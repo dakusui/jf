@@ -9,15 +9,14 @@ In order to improve human-readability, where visual structure on an editor scree
 They use indentations, blocks with braces, or tags in brackets to show data structure visually to humans.
 Also, some of them allow omitting punctuations in data, where possible.
 
-Some of these notations have features to data texts less redundant as much as possible by implementing feature to define nodes based on others.
+These notations sometimes have features to make data texts non-redundant as much as possible by allowing to define nodes based on others.
 For instance, **YAML** allows a node to "inherit" another in the same file.
 **HOCON** and **HCL** have features to reference other nodes' values to define a value of a node on top of inheritances.
 Such features are also sometimes implemented as a part of application programs.
-Without these features, users will need to define the same values and structures multiple times, which is error-prone and causes poor user experiences.
+Without these, users will need to define the same values and structures multiple times, which is error-prone and causes poor user experiences.
 In this article, we refer to such features **syntax sugars**, which are improving "machine-readability" as it helps keep notation processors of applications simple.
 
-However, in this situation, where each notation and application has its own syntax sugars, user-experiences across applications are already damaged.
-Because the learning costs of a notation will be expensive, behaviors of similar features will be not consistent and subtly different.
+However, in this situation, where each notation and application has its own syntax sugars, user experiences across applications become inconsistent and poor.
 
 In this section, we will discuss a novel processing pipeline, where human-readability and machine-readability are both addressed as separate concerns.
 To achieve this approach, we have created a tool called **jq-front**<<jq-front>> and a pipeline that employs it.
@@ -41,7 +40,7 @@ Through examining various notations, authors realized the functionalities design
 * Inheritances of nodes
 * Computations of node values from other nodes
 
-Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, and others are designed to be "superset" of **JSON** or tools to convert them into **JSON** are widely available.
+Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, and others are designed to be "superset" of **JSON** or tools to convert them into **JSON** are available.
 
 *JSON{plus}{plus}* is a notation to implement the features but within the syntax of **JSON** by introducing a few keywords that have special semantics.
 
