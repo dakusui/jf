@@ -35,3 +35,7 @@ Application-level Syntax-sugars::
 An application sometimes defines its own syntax on top of its data notation for user's convenience.
 We expect such a syntax to be simplified and uniformed by applying our approach.
 However, this benefit was not examined in this study.
+
+Inheritances and Node References::
+Authors identified Inheritances and Node References are elementary features, and they are sufficient to make application data files concise and human-readable.
+But this is based on our experiences and observations.

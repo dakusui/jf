@@ -3,7 +3,8 @@
 [[technique]]
 == Technique
 
-As stated in the <<background>> section, the industry has been trying to address similar problems via different approaches.
+As stated in the <<background>> section,
+the industry has been trying to address the same problem via similar yet different approaches.
 
 In order to improve human-readability, where visual structure on an editor screen, resemblance with existing formats, or number of lines and tokens matter more, various notations have been introduced, such as **YAML**, **TOML**, **HCL**, or **HOCON**.
 They use indentations, blocks with braces, or tags in brackets to show data structure visually to humans.
@@ -16,16 +17,12 @@ Such features are also sometimes implemented as a part of application programs.
 Without these, users will need to define the same values and structures multiple times, which is error-prone and causes poor user experiences.
 In this article, we refer to such features **syntax sugars**, which are improving "machine-readability" as it helps keep notation processors of applications simple.
 
-However, in this situation, where each notation and application has its own syntax sugars, user experiences across applications become inconsistent and poor.
+However, in this situation, where each notation and application has its own syntax sugars, user experiences across applications become inconsistent.
 
-In this section, we will discuss a novel processing pipeline, where human-readability and machine-readability are both addressed as separate concerns.
-To achieve this approach, we have created a tool called **jq-front**<<jq-front>> and a pipeline that employs it.
+In this section, we will discuss a novel processing pipeline, where human-readability and machine-readability are considered separate concerns and both achieved.
+To implement this approach, we have created a tool called **jq-front**<<jq-front>> and a pipeline that employs it.
 
-This approach enables a single uniformed yet sufficiently powerful set of syntax sugars and various human-readable notations at the same time in a consistent manner.
-
-We can think of another approach to employ templating engines such as Handlebars<<handlebars>> and Mustache<<mustache>>.
-However, it will create other challenges because it makes template files invalid in original notations.
-The benefits and limitations of the approach will be discussed in the <<discussion>> section compared with ours.
+This enables a single uniformed yet sufficiently powerful set of syntax sugars and various human-readable notations at the same time in a consistent manner.
 
 === Separation of Concerns: Readability for Humans and Machines
 
@@ -47,7 +44,7 @@ Also, all those notations, such as **YAML**, **TOML**, **HOCON**, **HCL**, and o
 As it is designed to be strictly compliant with **JSON**, we do not need to re-implement tools to edit, manipulate, or validate it.
 We can just reuse such tools developed for **JSON**.
 Applications will not need to develop its own custom configuration format.
-They will just choose one of preferred formats from **YAML**, **TOML**, etc. and define built-in files to ease user's effort, if need be.
+They will just choose one of the preferred formats from **YAML**, **TOML**, etc. and define built-in files to ease user's effort if the need be.
 
 ==== JSON++ processor: jq-front
 
@@ -117,6 +114,8 @@ For the sake of the discussion, we assume we have the following files in the cur
   "base": "world"
 }
 ----
+
+In the implementation of **jq-front**,
 
 ==== Inheritance Mechanism
 

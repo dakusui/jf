@@ -45,9 +45,10 @@ It will also be discussed how and when proposed approach becomes beneficial comp
 - Empirical Validation: We demonstrate the effectiveness of our approach on a couple of existing tools.
 - Generalizability: As the syntax the approach introduces is notation neutral, it can be applied to notations and applications that use them, which can be converted to and back from *JSON*
 
-
 The rest of this paper is organized as follows:
 In <<background>>, we will discuss how the problem of repetitiveness in configuration files and other sorts of files has been addressed, or not addressed.
 In <<technique>>, the details of our approach and the syntax we designed for this approach will be described.
 Then in <<results>>, we look into how much the approach can reduce the size of configuration files by applying it to an actual example.
+In the <<discussion>> section, the results will be analyzed and comparisons with existing approaches will be conducted.
+Also, another approach based on templating engines such as **Handlebars**<<handlebars>> and **Mustache**<<mustache>> will be discussed in this section.
 In the <<conclusion>>, we will summarize our findings and future works.
